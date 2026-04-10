@@ -25,7 +25,10 @@ export function Calendar() {
     selectedDetail,
     setBriefForSelected,
     setDetailForSelected,
+    deleteMemoForSelected,
     getBriefForDate,
+    memosLoading,
+    syncError,
     goToPreviousMonth,
     goToNextMonth,
     goToCurrentMonth,
@@ -127,8 +130,26 @@ export function Calendar() {
           )}
           <p className={styles.memoPanelHint}>
             달력에서 날짜를 누르면 짧은 메모는 셀에 요약으로 보이고, 아래에서 상세까지 적을 수
-            있습니다.
+            있습니다. 메모는 서버(PostgreSQL)에 저장됩니다.
           </p>
+
+          {syncError ? (
+            <p className={styles.syncError} role="alert">
+              {syncError}
+            </p>
+          ) : null}
+          {memosLoading ? <p className={styles.syncHint}>메모 불러오는 중…</p> : null}
+
+          <div className={styles.memoActions}>
+            <button
+              type="button"
+              className={styles.buttonDanger}
+              onClick={() => void deleteMemoForSelected()}
+              disabled={!selectedDate || memosLoading}
+            >
+              이 날짜 메모 삭제
+            </button>
+          </div>
 
           <label className={styles.fieldLabel} htmlFor="calendar-memo-brief">
             짧은 메모 <span className={styles.fieldHint}>(달력 셀에 표시)</span>
@@ -141,8 +162,8 @@ export function Calendar() {
             placeholder="예: 팀 회의, 병원"
             value={selectedDate ? selectedBrief : ""}
             onChange={(e) => setBriefForSelected(e.target.value)}
-            disabled={!selectedDate}
-            aria-disabled={!selectedDate}
+            disabled={!selectedDate || memosLoading}
+            aria-disabled={!selectedDate || memosLoading}
           />
           <div className={styles.charCount} aria-live="polite">
             {selectedDate ? `${selectedBrief.length} / ${BRIEF_MAX_LENGTH}` : ""}
@@ -158,8 +179,8 @@ export function Calendar() {
             placeholder="시간, 장소, 준비물, 메모 등 자유롭게 적어 보세요."
             value={selectedDate ? selectedDetail : ""}
             onChange={(e) => setDetailForSelected(e.target.value)}
-            disabled={!selectedDate}
-            aria-disabled={!selectedDate}
+            disabled={!selectedDate || memosLoading}
+            aria-disabled={!selectedDate || memosLoading}
           />
         </aside>
       </div>

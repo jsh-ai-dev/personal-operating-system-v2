@@ -1,0 +1,19 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+/// 프론트의 날짜별 메모와 맞추기 위한 최소 스키마 (추후 확장)
+model CalendarMemo {
+  id        String   @id @default(uuid())
+  dateKey   String   @unique @map("date_key")
+  brief     String   @default("")
+  detail    String   @default("")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("calendar_memos")
+}
