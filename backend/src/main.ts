@@ -1,10 +1,14 @@
 import { ValidationPipe } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
+import type { NestExpressApplication } from "@nestjs/platform-express";
 
 import { AppModule } from "./app.module";
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+
+  /** 프록시 뒤에서도 `req.ip`·레이트 리밋 트래커가 실제 클라이언트를 보도록 */
+  app.getHttpAdapter().getInstance().set("trust proxy", 1);
 
   app.useGlobalPipes(
     new ValidationPipe({

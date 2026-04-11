@@ -1,4 +1,5 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Post, Req } from "@nestjs/common";
+import { minutes, Throttle } from "@nestjs/throttler";
 import type { Request } from "express";
 
 import { Public } from "../common/decorators/public.decorator";
@@ -13,6 +14,7 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Public()
+  @Throttle({ default: { limit: 8, ttl: minutes(60) } })
   @Post("register")
   @HttpCode(HttpStatus.CREATED)
   register(@Body() dto: RegisterDto) {
@@ -20,6 +22,7 @@ export class AuthController {
   }
 
   @Public()
+  @Throttle({ default: { limit: 12, ttl: minutes(15) } })
   @Post("login")
   @HttpCode(HttpStatus.OK)
   login(@Body() dto: LoginDto) {
