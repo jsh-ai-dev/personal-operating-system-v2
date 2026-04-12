@@ -47,7 +47,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <p className={styles.brand}>메뉴</p>
         <nav className={styles.nav}>
           {NAV_ITEMS.map((item) => {
-            const active = pathname === item.href;
+            const active =
+              item.href === "/notes" ? pathname.startsWith("/notes") : pathname === item.href;
             return (
               <Link
                 key={item.href}
