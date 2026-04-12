@@ -21,6 +21,21 @@ export type ListNotesParams = {
   keyword?: string;
   bookmarkedOnly?: boolean;
   sort?: NoteListSort;
+  /** Spring 기본 0부터 */
+  page?: number;
+  /** 페이지당 개수 (Spring 기본 20) */
+  size?: number;
+};
+
+export type NotesListPage = {
+  notes: NoteDto[];
+  /** 0-based */
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+  hasPrevious: boolean;
+  hasNext: boolean;
 };
 
 function toTags(raw: unknown): string[] {
@@ -43,18 +58,52 @@ function parseNote(raw: unknown): NoteDto {
   };
 }
 
-export async function fetchNotesList(params: ListNotesParams = {}): Promise<NoteDto[]> {
+function parseIntHeader(headers: Headers, name: string, fallback: number): number {
+  const raw = headers.get(name) ?? headers.get(name.toLowerCase());
+  if (raw == null || raw === "") return fallback;
+  const n = Number.parseInt(raw, 10);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function parseBoolHeader(headers: Headers, name: string): boolean {
+  const raw = headers.get(name) ?? headers.get(name.toLowerCase());
+  return raw === "true";
+}
+
+function parseNotesPageResponse(res: Response, notes: NoteDto[]): NotesListPage {
+  const h = res.headers;
+  const page = parseIntHeader(h, "x-page", 0);
+  const size = parseIntHeader(h, "x-size", 20);
+  const totalElements = parseIntHeader(h, "x-total-elements", notes.length);
+  const totalPages = Math.max(0, parseIntHeader(h, "x-total-pages", 0));
+  return {
+    notes,
+    page,
+    size,
+    totalElements,
+    totalPages,
+    hasPrevious: parseBoolHeader(h, "x-has-previous"),
+    hasNext: parseBoolHeader(h, "x-has-next"),
+  };
+}
+
+export async function fetchNotesList(params: ListNotesParams = {}): Promise<NotesListPage> {
   const sp = new URLSearchParams();
   if (params.keyword?.trim()) sp.set("keyword", params.keyword.trim());
   if (params.bookmarkedOnly) sp.set("bookmarkedOnly", "true");
   if (params.sort) sp.set("sort", params.sort);
+  const page = params.page ?? 0;
+  const size = params.size ?? 20;
+  sp.set("page", String(page));
+  sp.set("size", String(size));
   const q = sp.toString();
-  const url = `${getNotesApiBaseUrl()}/v1/notes${q ? `?${q}` : ""}`;
+  const url = `${getNotesApiBaseUrl()}/v1/notes?${q}`;
   const res = await apiFetch(url);
   if (!res.ok) throw new Error(await parseErrorMessage(res));
   const data: unknown = await res.json();
   if (!Array.isArray(data)) throw new Error("Invalid notes list");
-  return data.map(parseNote);
+  const notes = data.map(parseNote);
+  return parseNotesPageResponse(res, notes);
 }
 
 export async function fetchNote(id: string): Promise<NoteDto> {

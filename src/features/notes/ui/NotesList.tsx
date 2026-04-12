@@ -14,6 +14,21 @@ function excerpt(text: string, max = 180): string {
   return `${oneLine.slice(0, max)}…`;
 }
 
+/** 0-based 인덱스 버튼 목록 (최대 7개 창) */
+function visiblePageIndices(totalPages: number, current0: number): number[] {
+  if (totalPages <= 0) return [];
+  if (totalPages <= 7) {
+    return Array.from({ length: totalPages }, (_, i) => i);
+  }
+  const cur = Math.min(Math.max(0, current0), totalPages - 1);
+  let start = Math.max(0, cur - 2);
+  const end = Math.min(totalPages - 1, start + 6);
+  start = Math.max(0, end - 6);
+  const out: number[] = [];
+  for (let i = start; i <= end; i++) out.push(i);
+  return out;
+}
+
 export function NotesList() {
   const router = useRouter();
   const [notes, setNotes] = useState<NoteDto[]>([]);
@@ -23,29 +38,49 @@ export function NotesList() {
   const [debouncedKeyword, setDebouncedKeyword] = useState("");
   const [bookmarkedOnly, setBookmarkedOnly] = useState(false);
   const [sort, setSort] = useState<NoteListSort>("recent");
+  const [pageIndex, setPageIndex] = useState(0);
+  const [pageSize, setPageSize] = useState(20);
+  const [totalElements, setTotalElements] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [hasPrevious, setHasPrevious] = useState(false);
+  const [hasNext, setHasNext] = useState(false);
 
   useEffect(() => {
     const t = window.setTimeout(() => setDebouncedKeyword(keyword.trim()), 320);
     return () => window.clearTimeout(t);
   }, [keyword]);
 
+  useEffect(() => {
+    setPageIndex(0);
+  }, [debouncedKeyword, bookmarkedOnly, sort, pageSize]);
+
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const list = await fetchNotesList({
+      const result = await fetchNotesList({
         keyword: debouncedKeyword || undefined,
         bookmarkedOnly,
         sort,
+        page: pageIndex,
+        size: pageSize,
       });
-      setNotes(list);
+      setNotes(result.notes);
+      setTotalElements(result.totalElements);
+      setTotalPages(result.totalPages);
+      setHasPrevious(result.hasPrevious);
+      setHasNext(result.hasNext);
     } catch (e) {
       setError(e instanceof Error ? e.message : "목록을 불러오지 못했습니다.");
       setNotes([]);
+      setTotalElements(0);
+      setTotalPages(0);
+      setHasPrevious(false);
+      setHasNext(false);
     } finally {
       setLoading(false);
     }
-  }, [debouncedKeyword, bookmarkedOnly, sort]);
+  }, [debouncedKeyword, bookmarkedOnly, sort, pageIndex, pageSize]);
 
   useEffect(() => {
     void load();
@@ -93,6 +128,19 @@ export function NotesList() {
           <option value="title">제목순</option>
           <option value="relevance">관련도순</option>
         </select>
+        <label className={styles.pageSizeLabel}>
+          <span className={styles.pageSizeText}>페이지당</span>
+          <select
+            className={styles.select}
+            value={pageSize}
+            onChange={(e) => setPageSize(Number(e.target.value))}
+            aria-label="페이지당 개수"
+          >
+            <option value={10}>10</option>
+            <option value={20}>20</option>
+            <option value={50}>50</option>
+          </select>
+        </label>
         <label className={styles.toggle}>
           <input
             type="checkbox"
@@ -112,7 +160,11 @@ export function NotesList() {
           노트가 없습니다. <Link href="/notes/new">새 노트</Link>를 만들거나 검색어를 바꿔 보세요.
         </div>
       ) : (
-        <div className={styles.cardGrid}>
+        <>
+          <p className={styles.listMeta} aria-live="polite">
+            전체 {totalElements.toLocaleString()}건 · 페이지 {totalPages > 0 ? pageIndex + 1 : 0} / {totalPages}
+          </p>
+          <div className={styles.cardGrid}>
           {notes.map((note) => (
             <div
               key={note.id}
@@ -157,7 +209,45 @@ export function NotesList() {
               </div>
             </div>
           ))}
-        </div>
+          </div>
+          {totalPages > 1 ? (
+            <nav className={styles.pagination} aria-label="페이지">
+              <button
+                type="button"
+                className={styles.pageNavBtn}
+                disabled={!hasPrevious}
+                onClick={() => setPageIndex((p) => Math.max(0, p - 1))}
+              >
+                이전
+              </button>
+              <div className={styles.pageNumbers}>
+                {visiblePageIndices(totalPages, pageIndex).map((idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    className={
+                      idx === pageIndex
+                        ? `${styles.pageNumBtn} ${styles.pageNumBtnActive}`
+                        : styles.pageNumBtn
+                    }
+                    aria-current={idx === pageIndex ? "page" : undefined}
+                    onClick={() => setPageIndex(idx)}
+                  >
+                    {idx + 1}
+                  </button>
+                ))}
+              </div>
+              <button
+                type="button"
+                className={styles.pageNavBtn}
+                disabled={!hasNext}
+                onClick={() => setPageIndex((p) => Math.min(totalPages - 1, p + 1))}
+              >
+                다음
+              </button>
+            </nav>
+          ) : null}
+        </>
       )}
     </section>
   );
