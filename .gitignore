@@ -25,6 +25,9 @@ backend/dist
 .DS_Store
 *.pem
 
+# JetBrains / IntelliJ (로컬 워크스페이스용, 저장소에 불필요)
+.idea/
+
 # debug
 npm-debug.log*
 yarn-debug.log*
