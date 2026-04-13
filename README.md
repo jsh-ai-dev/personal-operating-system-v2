@@ -1,7 +1,7 @@
-# Personal Operating System v2
+# Personal Operating System mk2
 
 TypeScript 기반 풀스택 개발 학습을 목표로 진행하는 사이드 프로젝트입니다.  
-이 저장소는 3개 프로젝트를 개별로 개발한 뒤 MSA로 통합하기 위한 두 번째 프로젝트입니다.
+이 저장소는 Personal Operating System 계열의 **mk2**이며, 3개 구현체(mk1·mk2·mk3)를 개별로 개발한 뒤 MSA로 통합하는 계획의 일부입니다.
 
 ## 프로젝트 목표
 

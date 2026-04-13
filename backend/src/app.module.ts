@@ -45,7 +45,7 @@ function resolveEnvFilePath(): string {
         let storage: ThrottlerStorage;
 
         if (redisUrl) {
-          const prefix = config.get<string>("REDIS_KEY_PREFIX")?.trim() || "pos_v2";
+          const prefix = config.get<string>("REDIS_KEY_PREFIX")?.trim() || "pos_mk2";
           const redis = new Redis(redisUrl, {
             keyPrefix: `${prefix}:throttle:`,
             maxRetriesPerRequest: 2,

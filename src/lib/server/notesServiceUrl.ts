@@ -1,5 +1,5 @@
 /**
- * Next Route Handler → 첫 번째 프로젝트(Spring) 노트 API로 프록시할 때 사용합니다.
+ * Next Route Handler → mk1(Spring) 노트 API로 프록시할 때 사용합니다.
  * 브라우저에 노출하지 마세요 — `.env.local`의 NOTES_SERVICE_URL 등.
  */
 export function getNotesServiceUrl(): string {

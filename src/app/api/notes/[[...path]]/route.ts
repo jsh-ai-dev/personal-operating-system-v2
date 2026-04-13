@@ -53,7 +53,7 @@ async function proxy(request: NextRequest, pathParts: string[]): Promise<NextRes
     });
   } catch {
     return NextResponse.json(
-      { message: "노트 API 서버에 연결할 수 없습니다. NOTES_SERVICE_URL과 Spring 실행 여부를 확인하세요." },
+      { message: "노트 API 서버에 연결할 수 없습니다. NOTES_SERVICE_URL과 mk1(Spring) 실행 여부를 확인하세요." },
       { status: 502 },
     );
   }

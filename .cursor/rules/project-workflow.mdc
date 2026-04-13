@@ -1,15 +1,16 @@
 ---
-description: POS v2 작업 기본 규칙
+description: POS mk2 작업 기본 규칙
 alwaysApply: true
 ---
 
-# POS v2 프로젝트 컨텍스트
+# POS mk2 프로젝트 컨텍스트
 
-- 이 프로젝트는 Personal Operating System의 두 번째 구현체이며, 장기적으로 MSA 통합을 목표로 한다.
-- 1차 프로젝트(`personal-operating-system`)는 기반 기능이 상당 부분 완료되었고, 현재는 v2를 메인 프론트 후보로 고도화한다.
-- v2 기술 스택: TypeScript + Next.js(React) + NestJS + PostgreSQL + Redis + Cursor.
+- 이 저장소는 Personal Operating System 계열의 **mk2**이며, 장기적으로 MSA 통합을 목표로 한다.
+- 네이밍: **mk1**(Spring·기존 백엔드 중심), **mk2**(본 저장소·TypeScript 풀스택·메인 웹 후보), **mk3**(추가 구현체).
+- 1차(mk1)는 기반 기능이 상당 부분 완료되었고, 현재는 mk2를 메인 프론트 후보로 고도화한다.
+- mk2 기술 스택: TypeScript + Next.js(React) + NestJS + PostgreSQL + Redis + Cursor.
 - 프론트엔드는 React 중심으로 경쟁력 있는 사용자 경험과 확장 가능한 구조를 우선한다.
-- 세 번째 프로젝트 시작 전, MSA 전환을 먼저 검토/진행한다는 최근 결정 사항을 반영한다.
+- 세 번째(mk3) 시작 전, MSA 전환을 먼저 검토/진행한다는 최근 결정 사항을 반영한다.
 
 # 사용자(개발자) 배경
 

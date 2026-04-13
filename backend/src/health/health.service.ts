@@ -7,7 +7,7 @@ export class HealthService {
   constructor(private readonly prisma: PrismaService) {}
 
   getLiveness() {
-    return { status: "ok" as const, service: "personal-operating-system-v2-api" };
+    return { status: "ok" as const, service: "personal-operating-system-mk2-api" };
   }
 
   async getDatabase() {

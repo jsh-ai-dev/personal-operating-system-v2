@@ -25,7 +25,7 @@ export class JwtRevocationService implements OnModuleDestroy {
 
   constructor(private readonly config: ConfigService) {
     const redisUrl = config.get<string>("REDIS_URL")?.trim();
-    const prefix = config.get<string>("REDIS_KEY_PREFIX")?.trim() || "pos_v2";
+    const prefix = config.get<string>("REDIS_KEY_PREFIX")?.trim() || "pos_mk2";
 
     if (redisUrl) {
       this.redis = new Redis(redisUrl, {
