@@ -15,7 +15,7 @@ services:
     env_file:
       - backend/.env
     environment:
-      DATABASE_URL: postgresql://pos:pos0401P*@postgres:5432/pos_mk2?schema=public
+      DATABASE_URL: postgresql://${MK2_DB_USERNAME:-pos}:${MK2_DB_PASSWORD:-pos}@postgres:5432/${MK2_DB_NAME:-pos_mk2}?schema=public
       REDIS_URL: redis://redis:6379
       AUTH_SERVICE_PORT: 3002
       CORS_ORIGIN: http://localhost:3000
@@ -35,7 +35,7 @@ services:
     env_file:
       - backend/.env
     environment:
-      DATABASE_URL: postgresql://pos:pos0401P*@postgres:5432/pos_mk2?schema=public
+      DATABASE_URL: postgresql://${MK2_DB_USERNAME:-pos}:${MK2_DB_PASSWORD:-pos}@postgres:5432/${MK2_DB_NAME:-pos_mk2}?schema=public
       REDIS_URL: redis://redis:6379
       PORT: 3001
       CORS_ORIGIN: http://localhost:3000
