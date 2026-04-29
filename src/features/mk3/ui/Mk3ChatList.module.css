@@ -1,0 +1,127 @@
+.page {
+  max-width: 760px;
+  margin: 28px auto;
+  padding: 0 20px;
+}
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.title {
+  margin: 0;
+  font-size: 24px;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.btn, .btnPrimary {
+  border: 1px solid #d1d5db;
+  background: #fff;
+  color: #334155;
+  border-radius: 8px;
+  padding: 7px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  text-decoration: none;
+}
+.btnPrimary {
+  border-color: #6366f1;
+  color: #4f46e5;
+}
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.row {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+}
+.item {
+  flex: 1;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 12px 14px;
+  text-decoration: none;
+  color: inherit;
+}
+.itemHidden {
+  opacity: 0.45;
+}
+.meta {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  color: #64748b;
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+.badge {
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  background: #f3f4f6;
+  color: #374151;
+}
+.badge_openai {
+  background: #d1fae5;
+  color: #065f46;
+}
+.badge_anthropic {
+  background: #fde68a;
+  color: #78350f;
+}
+.badge_google {
+  background: #dbeafe;
+  color: #1e3a8a;
+}
+.typeTag {
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+}
+.typeApi {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+.typeChat {
+  background: #ecfdf5;
+  color: #065f46;
+}
+.typeCode {
+  background: #ede9fe;
+  color: #5b21b6;
+}
+.cost {
+  color: #059669;
+  font-weight: 700;
+}
+.titleLine {
+  font-size: 14px;
+  color: #0f172a;
+  margin-bottom: 4px;
+}
+.sub {
+  font-size: 12px;
+  color: #94a3b8;
+}
+.sideBtn {
+  width: 32px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #fff;
+  color: #94a3b8;
+  cursor: pointer;
+}
+.result {
+  margin: 8px 0 12px;
+  font-size: 12px;
+  color: #059669;
+}
