@@ -1,0 +1,230 @@
+.page {
+  max-width: 980px;
+  margin: 28px auto;
+  padding: 0 20px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  gap: 12px;
+}
+
+.title {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 800;
+  color: #111827;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.refreshTime {
+  font-size: 12px;
+  color: #64748b;
+  white-space: nowrap;
+}
+
+.ghostBtn,
+.addBtn {
+  border: 1px solid #d1d5db;
+  background: #fff;
+  color: #111827;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.addBtn {
+  border-color: #6366f1;
+  color: #4f46e5;
+}
+
+.addBtn:hover {
+  background: #eef2ff;
+}
+
+.ghostBtn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.summary {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 18px;
+  margin-bottom: 16px;
+  color: #64748b;
+}
+
+.summaryItem {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.summaryItem strong {
+  font-size: 22px;
+  color: #0f172a;
+}
+
+.count {
+  color: #94a3b8;
+}
+
+.syncStatusRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.syncStatus {
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 12px;
+  border: 1px solid #e2e8f0;
+  color: #334155;
+}
+
+.sync_pending {
+  color: #475569;
+  border-color: #cbd5e1;
+  background: #f8fafc;
+}
+
+.sync_syncing {
+  color: #b45309;
+  border-color: #fcd34d;
+  background: #fffbeb;
+}
+
+.sync_done {
+  color: #166534;
+  border-color: #86efac;
+  background: #f0fdf4;
+}
+
+.sync_login_required,
+.sync_error {
+  color: #b91c1c;
+  border-color: #fecaca;
+  background: #fef2f2;
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 14px;
+}
+
+.card {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 14px;
+  background: #fff;
+  cursor: grab;
+  position: relative;
+}
+
+.cardDragging {
+  opacity: 0.55;
+}
+
+.cardDropTarget::before {
+  content: "";
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  top: -8px;
+  height: 3px;
+  border-radius: 999px;
+  background: #6366f1;
+}
+
+.cardTitle {
+  margin: 0 0 10px;
+  font-size: 16px;
+}
+
+.cardLine {
+  margin: 4px 0;
+  font-size: 13px;
+  color: #475569;
+}
+
+.cardActions {
+  margin-top: 10px;
+  display: flex;
+  gap: 8px;
+}
+
+.usageBox {
+  margin-top: 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 8px;
+  background: #f8fafc;
+}
+
+.usageHead {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #334155;
+}
+
+.usageBarBg {
+  margin-top: 6px;
+  background: #e2e8f0;
+  border-radius: 999px;
+  height: 6px;
+}
+
+.usageBarFill {
+  height: 6px;
+  border-radius: 999px;
+  transition: width 0.2s ease;
+}
+
+.usageText {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.cardBtn {
+  border: 1px solid #d1d5db;
+  background: #fff;
+  color: #111827;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 12px;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.cardBtnDanger {
+  border-color: #fecaca;
+  color: #b91c1c;
+}
+
+.empty,
+.error {
+  margin-top: 20px;
+  color: #94a3b8;
+}
+
+.error {
+  color: #b91c1c;
+}

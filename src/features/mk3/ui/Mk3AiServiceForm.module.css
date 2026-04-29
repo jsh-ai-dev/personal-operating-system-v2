@@ -1,0 +1,90 @@
+.page {
+  max-width: 560px;
+  margin: 28px auto;
+  padding: 0 20px;
+}
+
+.header {
+  margin-bottom: 20px;
+}
+
+.back {
+  color: #64748b;
+  text-decoration: none;
+  font-size: 13px;
+}
+
+.title {
+  margin: 8px 0 0;
+  font-size: 22px;
+  color: #0f172a;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.label {
+  font-size: 13px;
+  color: #475569;
+}
+
+.input,
+.select,
+.textarea {
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 9px 10px;
+  font-size: 14px;
+  background: #fff;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.section {
+  font-size: 12px;
+  color: #94a3b8;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 6px;
+}
+
+.error {
+  color: #b91c1c;
+  font-size: 13px;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.btn {
+  border: 1px solid #d1d5db;
+  background: #fff;
+  color: #111827;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 13px;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.btnPrimary {
+  border-color: #6366f1;
+  background: #6366f1;
+  color: #fff;
+}
