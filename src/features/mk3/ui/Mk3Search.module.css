@@ -1,0 +1,225 @@
+.page {
+  max-width: 760px;
+  margin: 28px auto;
+  padding: 0 20px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.title {
+  margin: 0;
+  font-size: 1.3rem;
+}
+
+.headerButton {
+  border: 1px solid #d1d5db;
+  background: #fff;
+  color: #374151;
+  border-radius: 8px;
+  padding: 7px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.headerButton:hover:not(:disabled) {
+  border-color: #6366f1;
+  color: #4f46e5;
+}
+
+.headerButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.searchBox {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.searchInput {
+  flex: 1;
+  min-width: 0;
+  box-sizing: border-box;
+  color: #111827;
+  padding: 12px 16px;
+  font-size: 0.9rem;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  outline: none;
+}
+
+.searchInput:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 2px #eef2ff;
+}
+
+.searchInput::placeholder {
+  color: #9ca3af;
+}
+
+.searchButton {
+  padding: 0 20px;
+  background: #6366f1;
+  color: #fff;
+  border: 0;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.searchButton:hover:not(:disabled) {
+  background: #4f46e5;
+}
+
+.searchButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.error {
+  margin: 0 0 12px;
+  font-size: 0.83rem;
+  color: #ef4444;
+}
+
+.indexSection {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin: -2px 0 18px;
+}
+
+.indexResult {
+  font-size: 0.78rem;
+  color: #22c55e;
+}
+
+.failed {
+  color: #f59e0b;
+}
+
+.resultsSection {
+  margin-top: 4px;
+}
+
+.resultsList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.resultCard {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fafafa;
+  padding: 12px 16px;
+  transition: border-color 0.15s ease;
+}
+
+.resultCard:hover {
+  border-color: #6366f1;
+}
+
+.resultMeta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.badge {
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.badgeDefault {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.badgeOpenai {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.badgeAnthropic {
+  background: #fde68a;
+  color: #78350f;
+}
+
+.badgeGoogle {
+  background: #dbeafe;
+  color: #1e3a8a;
+}
+
+.badgeJetbrains {
+  background: #ede9fe;
+  color: #5b21b6;
+}
+
+.date {
+  font-size: 0.75rem;
+  color: #9ca3af;
+}
+
+.score {
+  margin-left: auto;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.resultTitleRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.resultTitle {
+  flex: 1;
+  font-size: 0.92rem;
+  color: #111827;
+  font-weight: 500;
+}
+
+.viewButton {
+  font-size: 0.78rem;
+  color: #6366f1;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.viewButton:hover {
+  text-decoration: underline;
+}
+
+.empty {
+  text-align: center;
+  color: #9ca3af;
+  font-size: 0.88rem;
+  margin-top: 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: center;
+}
+
+.emptyHint {
+  font-size: 0.8rem;
+}
