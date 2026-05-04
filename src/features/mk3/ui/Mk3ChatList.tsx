@@ -32,6 +32,7 @@ type ServiceFilterKey =
   | "jetbrains-codex"
   | "claude-export"
   | "claude-code"
+  | "gemini-takeout"
   | "chatgpt"
   | "gemini-code-assist"
   | "copilot"
