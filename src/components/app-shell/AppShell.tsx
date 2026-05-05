@@ -14,6 +14,7 @@ const NAV_ITEMS = [
   { href: "/mk3/summaries", label: "AI Summary" },
   { href: "/mk3/search", label: "AI Search" },
   { href: "/mk3/quiz", label: "AI Quiz" },
+  { href: "/mk3/news", label: "AI News" },
 ] as const;
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -61,6 +62,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   ? pathname.startsWith("/mk3/chat")
                 : item.href === "/mk3/search"
                   ? pathname.startsWith("/mk3/search")
+                : item.href === "/mk3/news"
+                  ? pathname.startsWith("/mk3/news")
                 : item.href === "/mk3/summaries"
                   ? pathname.startsWith("/mk3/summaries")
                 : item.href === "/mk3/quiz"
