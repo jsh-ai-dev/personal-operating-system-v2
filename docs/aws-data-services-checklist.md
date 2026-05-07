@@ -14,19 +14,12 @@
 - `rds-mk1-postgres`
 - `rds-mk2-postgres`
 
-## mk1 / mk2 Redis (ElastiCache)
+## mk1 / mk2 Redis (EC2 data-box self-host)
 
-- 엔진: Redis OSS 7.x
-- 노드 타입: `cache.t4g.micro`
-- replicas: 0 (학습용 단일 노드)
-- Multi-AZ: off
-- at-rest / in-transit encryption: on (가능하면)
+- 엔진: `redis:7-alpine` (Docker)
+- 영속성: `--appendonly yes`
 - SG: `sg-k8s-node`에서 `6379` 허용
-
-권장 생성:
-
-- `redis-mk1`
-- `redis-mk2`
+- 권장: `mk1`의 `compose.redis.yaml` 재사용
 
 ## mk1 Elasticsearch (EC2 t3.small)
 
@@ -75,6 +68,6 @@ volumes:
 
 아래 endpoint를 각 리포의 `k8s/overlays/aws` secret/config에 주입한다.
 
-- mk1: RDS endpoint, Redis endpoint, Elasticsearch endpoint
-- mk2: RDS endpoint, Redis endpoint
+- mk1: RDS endpoint, data-box Redis host, data-box Elasticsearch host
+- mk2: RDS endpoint, data-box Redis host
 - mk3: Mongo endpoint, Qdrant endpoint/API key

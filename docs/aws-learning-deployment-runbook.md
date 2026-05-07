@@ -27,10 +27,8 @@
 
 ### Managed / 외부 서비스
 
-- RDS: `mk1-postgres`, `mk2-postgres`
-- ElastiCache: `mk1-redis`, `mk2-redis`
-- EC2 t3.small: `mk1-elasticsearch`
-- 별도 소형 EC2 (Docker): `mk3-mongodb`, `mk3-qdrant`
+- RDS: `mk1/mk2` 공용 PostgreSQL
+- 별도 소형 EC2 (Docker): `mk1-elasticsearch`, `mk1/mk2-redis`, `mk3-mongodb`, `mk3-qdrant`
 
 참고: MongoDB/Qdrant는 RDS 대상이 아니다. 학습 단계에서는 별도 EC2 self-host가 가장 저렴하고 디버깅도 단순하다.
 
@@ -47,22 +45,17 @@
 ### EC2
 
 1. `t3.large` 1대: k8s 단일노드
-2. `t3.small` 1대: Elasticsearch
-3. `t3.small` 1대: MongoDB + Qdrant (Docker)
+2. `t3.small` 1대: Elasticsearch + Redis + MongoDB + Qdrant (Docker)
 
 ### 보안그룹 기본 규칙
 
 - `sg-k8s-node`
   - inbound: `22` (내 IP), `80/443` (필요 시), `6443`(관리용 내부)
   - outbound: all
-- `sg-rds-mk1`, `sg-rds-mk2`
+- `sg-rds-shared`
   - inbound: `5432` from `sg-k8s-node`
-- `sg-redis-mk1`, `sg-redis-mk2`
-  - inbound: `6379` from `sg-k8s-node`
-- `sg-es`
-  - inbound: `9200` from `sg-k8s-node`
-- `sg-mk3-data`
-  - inbound: `27017`, `6333`, `6334` from `sg-k8s-node`
+- `sg-data-box`
+  - inbound: `6379`, `9200`, `27017`, `6333`, `6334` from `sg-k8s-node`
 
 ## 4) k8s 단일노드 설치 (k3s 권장)
 
@@ -107,7 +100,7 @@ kubectl -n <namespace> get deploy,svc,ingress,pods
 ## 7) 검증 체크리스트
 
 1. Pod Ready 여부
-2. 각 앱에서 외부 DB/Redis 접속 성공 로그
+2. 각 앱에서 외부 DB/Redis(data-box) 접속 성공 로그
 3. mk1에서 Elasticsearch 인덱스/검색 성공
 4. mk3에서 MongoDB 쓰기 + Qdrant upsert/search 성공
 5. Ingress 경유로 API/Web 라우팅 정상
@@ -127,7 +120,7 @@ pwsh ./scripts/aws/check-overlay-placeholders.ps1 -WorkspaceRoot "D:/dev"
    - EC2 CPU
    - 디스크 사용량
    - RDS FreeStorage
-3. 실습 종료 시 RDS/ElastiCache/EC2 종료 또는 스냅샷 후 삭제
+3. 실습 종료 시 RDS/EC2 종료 또는 스냅샷 후 삭제
 
 ## 9) 트러블슈팅 시작점
 

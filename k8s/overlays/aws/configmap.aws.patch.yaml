@@ -3,6 +3,6 @@ kind: ConfigMap
 metadata:
   name: mk2-config
 data:
-  REDIS_URL: "redis://REPLACE_ELASTICACHE_ENDPOINT:6379"
+  REDIS_URL: "redis://REPLACE_DATA_BOX_REDIS_HOST:6379"
   CORS_ORIGIN: "https://mk2.REPLACE_DOMAIN"
   NOTES_SERVICE_URL: "http://mk1-app.pos-mk1.svc.cluster.local:8080"

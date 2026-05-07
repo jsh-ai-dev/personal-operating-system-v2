@@ -28,7 +28,8 @@ kubectl -n pos-mk2 get all
 
 ## AWS overlay
 
-Use this when DB/Redis are external (RDS/ElastiCache) and only app workloads run on EKS.
+Use this when DB is external (RDS) and app workloads run on EKS.
+Redis can run on a separate data-box EC2.
 
 1) Prepare overlay secret:
 
