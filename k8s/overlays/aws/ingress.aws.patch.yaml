@@ -4,6 +4,10 @@ metadata:
   name: mk2-ingress
 spec:
   ingressClassName: traefik
+  tls:
+    - hosts:
+        - www.jsh-ai-dev.com
+      secretName: mk2-tls-secret
   rules:
     - host: www.jsh-ai-dev.com
       http:

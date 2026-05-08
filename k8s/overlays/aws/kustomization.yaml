@@ -11,6 +11,8 @@ resources:
   - ../../base/web.yaml
   - ../../base/ingress.yaml
   - secret.aws.yaml
+  - issuer.letsencrypt.yaml
+  - certificate.mk2.yaml
 
 patches:
   - path: configmap.aws.patch.yaml

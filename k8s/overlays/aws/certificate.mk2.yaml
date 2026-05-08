@@ -1,0 +1,11 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: mk2-tls
+spec:
+  secretName: mk2-tls-secret
+  issuerRef:
+    name: letsencrypt-prod
+    kind: Issuer
+  dnsNames:
+    - www.jsh-ai-dev.com
