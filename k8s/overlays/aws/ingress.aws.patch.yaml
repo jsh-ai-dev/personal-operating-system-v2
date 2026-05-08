@@ -3,5 +3,6 @@ kind: Ingress
 metadata:
   name: mk2-ingress
 spec:
+  ingressClassName: traefik
   rules:
-    - host: mk2.REPLACE_DOMAIN
+    - host: www.jsh-ai-dev.com

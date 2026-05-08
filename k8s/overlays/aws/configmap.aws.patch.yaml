@@ -4,5 +4,5 @@ metadata:
   name: mk2-config
 data:
   REDIS_URL: "redis://:<REDIS_PASSWORD>@10.20.17.124:6379"
-  CORS_ORIGIN: "https://mk2.REPLACE_DOMAIN"
+  CORS_ORIGIN: "https://www.jsh-ai-dev.com"
   NOTES_SERVICE_URL: "http://mk1-app.pos-mk1.svc.cluster.local:8080"
