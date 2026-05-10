@@ -6,7 +6,7 @@ import { useCallback, useEffect, useState } from "react";
 import { deleteConversation, importConversations, listConversations, setConversationHidden, type Conversation } from "@/features/mk3/application/chatApi";
 import styles from "@/features/mk3/ui/Mk3ChatList.module.css";
 
-type ImportKey = "jetbrains-codex" | "claude-export" | "claude-code" | "gemini-takeout";
+type ImportKey = "jetbrains-codex" | "claude-export" | "claude-code" | "gemini-takeout" | "chatgpt-export";
 type ImportOption = {
   name: string;
   key: string;
@@ -15,7 +15,7 @@ type ImportOption = {
 };
 
 const IMPORT_OPTIONS: ImportOption[] = [
-  { name: "ChatGPT", key: "chatgpt", enabled: false },
+  { name: "ChatGPT", key: "chatgpt-export", enabled: true, target: "chatgpt-export" },
   { name: "Codex", key: "jetbrains-codex", enabled: true, target: "jetbrains-codex" },
   { name: "Gemini", key: "gemini-takeout", enabled: true, target: "gemini-takeout" },
   { name: "Gemini Code Assist", key: "gemini-code-assist", enabled: false },
@@ -151,6 +151,7 @@ export function Mk3ChatList() {
       "claude-code": "Claude Code",
       claude: "Claude.ai",
       gemini: "Gemini",
+      chatgpt: "ChatGPT",
     };
     if (byModel[conv.model]) return byModel[conv.model];
     const byProvider: Record<string, string> = {
@@ -163,7 +164,7 @@ export function Mk3ChatList() {
 
   function convType(conv: Conversation): { label: string; cls: string } {
     if (conv.model === "codex" || conv.model === "claude-code") return { label: "코딩", cls: styles.typeCode };
-    if (conv.model === "claude" || conv.model === "gemini") return { label: "채팅 임포트", cls: styles.typeChat };
+    if (conv.model === "claude" || conv.model === "gemini" || conv.model === "chatgpt") return { label: "채팅 임포트", cls: styles.typeChat };
     return { label: "API", cls: styles.typeApi };
   }
 
@@ -172,6 +173,7 @@ export function Mk3ChatList() {
     if (conv.model === "claude-code") return "claude-code";
     if (conv.model === "claude") return "claude-export";
     if (conv.model === "gemini") return "gemini-takeout";
+    if (conv.model === "chatgpt") return "chatgpt";
     if (conv.provider === "openai") return "openai";
     if (conv.provider === "anthropic") return "anthropic";
     if (conv.provider === "google") return "google";

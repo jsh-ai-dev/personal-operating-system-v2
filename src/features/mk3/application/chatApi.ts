@@ -162,7 +162,9 @@ export async function generateQuiz(id: string, model: string): Promise<{
   return readJsonSafe(res, { quiz: [], tokens_input: 0, tokens_output: 0, cost_usd: 0 });
 }
 
-export async function importConversations(target: "jetbrains-codex" | "claude-export" | "claude-code" | "gemini-takeout") {
+export async function importConversations(
+  target: "jetbrains-codex" | "claude-export" | "claude-code" | "gemini-takeout" | "chatgpt-export",
+) {
   const res = await fetch(`/api/mk3/v1/import/${target}`, {
     method: "POST",
     credentials: "include",
