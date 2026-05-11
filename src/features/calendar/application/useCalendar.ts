@@ -28,7 +28,7 @@ const emptyMemo = (): DayMemo => ({ brief: "", detail: "" });
 
 export function useCalendar() {
   const [viewDate, setViewDate] = useState<Date>(() => getStartOfMonth(new Date()));
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(() => new Date());
   const [memos, setMemos] = useState<Record<string, DayMemo>>({});
   const [monthlyGoals, setMonthlyGoals] = useState<Record<string, string>>({});
   const [weeklyGoals, setWeeklyGoals] = useState<Record<string, string>>({});
@@ -46,6 +46,8 @@ export function useCalendar() {
   const days = useMemo(() => createMonthCalendar(viewDate), [viewDate]);
   const monthLabel = useMemo(() => toMonthLabel(viewDate), [viewDate]);
   const viewYearMonthKey = useMemo(() => toYearMonthKey(viewDate), [viewDate]);
+  const viewYear = viewDate.getFullYear();
+  const viewMonth = viewDate.getMonth() + 1;
   const weekRanges = useMemo(() => getCalendarWeekRanges(days), [days]);
 
   const publicHolidayNamesByDateKey = useMemo(
@@ -222,15 +224,24 @@ export function useCalendar() {
 
   const goToPreviousMonth = () => {
     setViewDate((current) => addMonths(current, -1));
+    setSelectedDate(null);
   };
 
   const goToNextMonth = () => {
     setViewDate((current) => addMonths(current, 1));
+    setSelectedDate(null);
   };
 
   const goToCurrentMonth = () => {
-    setViewDate(getStartOfMonth(new Date()));
+    const today = new Date();
+    setViewDate(getStartOfMonth(today));
+    setSelectedDate(today);
   };
+
+  const setCalendarMonth = useCallback((year: number, month: number) => {
+    setViewDate(new Date(year, month - 1, 1));
+    setSelectedDate(null);
+  }, []);
 
   const scheduleMonthlyPersist = useCallback((yearMonth: string, text: string) => {
     if (monthlyTimerRef.current) clearTimeout(monthlyTimerRef.current);
@@ -272,6 +283,8 @@ export function useCalendar() {
   return {
     days,
     monthLabel,
+    viewYear,
+    viewMonth,
     viewYearMonthKey,
     weekRanges,
     publicHolidayNamesByDateKey,
@@ -292,5 +305,6 @@ export function useCalendar() {
     goToPreviousMonth,
     goToNextMonth,
     goToCurrentMonth,
+    setCalendarMonth,
   };
 }

@@ -11,6 +11,8 @@ const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
 
 const BRIEF_MAX_LENGTH = 120;
 const DAY_MEMO_ROWS = 3;
+const YEAR_SPAN = 5;
+const MONTH_OPTIONS = Array.from({ length: 12 }, (_, index) => index + 1);
 
 function clampExplicitLines(value: string): string {
   return value.split(/\r?\n/).slice(0, DAY_MEMO_ROWS).join("\n");
@@ -33,6 +35,8 @@ export function Calendar() {
   const {
     days,
     monthLabel,
+    viewYear,
+    viewMonth,
     weekRanges,
     publicHolidayNamesByDateKey,
     monthlyGoal,
@@ -52,7 +56,12 @@ export function Calendar() {
     goToPreviousMonth,
     goToNextMonth,
     goToCurrentMonth,
+    setCalendarMonth,
   } = useCalendar();
+  const yearOptions = Array.from(
+    { length: YEAR_SPAN * 2 + 1 },
+    (_, index) => new Date().getFullYear() - YEAR_SPAN + index,
+  );
 
   const panelDateLabel = selectedDate
     ? selectedDate.toLocaleDateString("ko-KR", {
@@ -66,7 +75,32 @@ export function Calendar() {
   return (
     <section className={styles.container} aria-label="일정 달력">
       <header className={styles.header}>
-        <h1 className={styles.title}>{monthLabel}</h1>
+        <div className={styles.monthPicker} aria-label={monthLabel}>
+          <select
+            className={[styles.select, styles.yearSelect].filter(Boolean).join(" ")}
+            value={viewYear}
+            onChange={(e) => setCalendarMonth(Number(e.target.value), viewMonth)}
+            aria-label="연도 선택"
+          >
+            {yearOptions.map((year) => (
+              <option key={year} value={year}>
+                {year}년
+              </option>
+            ))}
+          </select>
+          <select
+            className={[styles.select, styles.monthSelect].filter(Boolean).join(" ")}
+            value={viewMonth}
+            onChange={(e) => setCalendarMonth(viewYear, Number(e.target.value))}
+            aria-label="월 선택"
+          >
+            {MONTH_OPTIONS.map((month) => (
+              <option key={month} value={month}>
+                {month}월
+              </option>
+            ))}
+          </select>
+        </div>
         <div className={styles.controls}>
           <button type="button" className={styles.button} onClick={goToPreviousMonth}>
             이전 달
