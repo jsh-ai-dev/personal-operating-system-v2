@@ -12,8 +12,6 @@ import { getCalendarWeekRanges } from "@/features/calendar/domain/calendarWeekRo
 import { buildKoreaPublicHolidayNameMap } from "@/features/calendar/domain/koreaPublicHolidays";
 import { toDateKey, toYearMonthKey } from "@/features/calendar/domain/dateKey";
 import {
-  deleteMonthlyGoalRemote,
-  deleteWeeklyGoalRemote,
   fetchMonthlyGoal,
   fetchWeeklyGoalsBatch,
   upsertMonthlyGoalRemote,
@@ -175,10 +173,9 @@ export function useCalendar() {
     [flushPersist],
   );
 
-  const setBriefForSelected = useCallback(
-    (brief: string) => {
-      if (!selectedDate) return;
-      const key = toDateKey(selectedDate);
+  const setBriefForDate = useCallback(
+    (date: Date, brief: string) => {
+      const key = toDateKey(date);
       setMemos((prev) => {
         const cur = prev[key] ?? emptyMemo();
         const next = { ...cur, brief };
@@ -186,7 +183,7 @@ export function useCalendar() {
         return { ...prev, [key]: next };
       });
     },
-    [selectedDate, schedulePersist],
+    [schedulePersist],
   );
 
   const setDetailForSelected = useCallback(
@@ -272,44 +269,6 @@ export function useCalendar() {
     [scheduleWeeklyPersist],
   );
 
-  const deleteMonthlyGoal = useCallback(async () => {
-    if (monthlyTimerRef.current) {
-      clearTimeout(monthlyTimerRef.current);
-      monthlyTimerRef.current = null;
-    }
-    const ym = viewYearMonthKey;
-    try {
-      setSyncError(null);
-      await deleteMonthlyGoalRemote(ym);
-      setMonthlyGoals((prev) => {
-        const next = { ...prev };
-        delete next[ym];
-        return next;
-      });
-    } catch {
-      setSyncError("삭제에 실패했습니다.");
-    }
-  }, [viewYearMonthKey]);
-
-  const deleteWeeklyGoalForRange = useCallback(async (rangeKey: string) => {
-    const timers = weeklyTimersRef.current;
-    if (timers[rangeKey]) {
-      clearTimeout(timers[rangeKey]);
-      delete timers[rangeKey];
-    }
-    try {
-      setSyncError(null);
-      await deleteWeeklyGoalRemote(rangeKey);
-      setWeeklyGoals((prev) => {
-        const next = { ...prev };
-        delete next[rangeKey];
-        return next;
-      });
-    } catch {
-      setSyncError("삭제에 실패했습니다.");
-    }
-  }, []);
-
   return {
     days,
     monthLabel,
@@ -320,13 +279,10 @@ export function useCalendar() {
     setMonthlyGoal,
     weeklyGoals,
     setWeeklyGoalForRange,
-    deleteMonthlyGoal,
-    deleteWeeklyGoalForRange,
     selectedDate,
     setSelectedDate,
-    selectedBrief: selectedMemo.brief,
     selectedDetail: selectedMemo.detail,
-    setBriefForSelected,
+    setBriefForDate,
     setDetailForSelected,
     deleteMemoForSelected,
     getBriefForDate,

@@ -7,9 +7,9 @@ import { parseErrorMessage } from "@/lib/api/parseErrorMessage";
 import styles from "@/components/app-shell/AppShell.module.css";
 
 const NAV_ITEMS = [
-  { href: "/calendar", label: "달력" },
-  { href: "/notes", label: "노트" },
-  { href: "/mk3/dashboard", label: "대시보드" },
+  { href: "/calendar", label: "Calendar" },
+  { href: "/notes", label: "Notes" },
+  { href: "/mk3/dashboard", label: "Dashboard" },
   { href: "/mk3/chat", label: "AI Chat" },
   { href: "/mk3/summaries", label: "AI Summary" },
   { href: "/mk3/search", label: "AI Search" },

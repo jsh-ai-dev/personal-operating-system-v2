@@ -1,5 +1,7 @@
 "use client";
 
+import type { ChangeEvent, KeyboardEvent } from "react";
+
 import { isSameDate } from "@/features/calendar/domain/calendar";
 import { toDateKey } from "@/features/calendar/domain/dateKey";
 import { useCalendar } from "@/features/calendar/application/useCalendar";
@@ -8,6 +10,24 @@ import styles from "@/features/calendar/ui/Calendar.module.css";
 const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
 
 const BRIEF_MAX_LENGTH = 120;
+const DAY_MEMO_ROWS = 3;
+
+function clampExplicitLines(value: string): string {
+  return value.split(/\r?\n/).slice(0, DAY_MEMO_ROWS).join("\n");
+}
+
+function clampToTextareaHeight(textarea: HTMLTextAreaElement, value: string): string {
+  let next = clampExplicitLines(value);
+  textarea.value = next;
+
+  while (next.length > 0 && textarea.scrollHeight > textarea.clientHeight) {
+    next = next.slice(0, -1);
+    textarea.value = next;
+  }
+
+  textarea.scrollTop = 0;
+  return next;
+}
 
 export function Calendar() {
   const {
@@ -19,13 +39,10 @@ export function Calendar() {
     setMonthlyGoal,
     weeklyGoals,
     setWeeklyGoalForRange,
-    deleteMonthlyGoal,
-    deleteWeeklyGoalForRange,
     selectedDate,
     setSelectedDate,
-    selectedBrief,
     selectedDetail,
-    setBriefForSelected,
+    setBriefForDate,
     setDetailForSelected,
     deleteMemoForSelected,
     getBriefForDate,
@@ -81,7 +98,7 @@ export function Calendar() {
           <div className={styles.grid}>
             {days.map((day) => {
               const isSelected = selectedDate ? isSameDate(selectedDate, day.date) : false;
-              const briefPreview = getBriefForDate(day.date);
+              const brief = getBriefForDate(day.date);
               const dateKey = toDateKey(day.date);
               const holidayName = publicHolidayNamesByDateKey.get(dateKey);
               const isSunday = day.date.getDay() === 0;
@@ -101,41 +118,67 @@ export function Calendar() {
               const dayNumberClass = [styles.dayNumber, isRedDay ? styles.redDay : ""]
                 .filter(Boolean)
                 .join(" ");
+              const handleDayMemoChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
+                setBriefForDate(day.date, clampToTextareaHeight(e.currentTarget, e.target.value));
+              };
+              const handleDayMemoKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+                if (e.key !== "Enter") return;
+                const lines = e.currentTarget.value.split(/\r?\n/);
+                if (lines.length >= DAY_MEMO_ROWS) e.preventDefault();
+              };
 
               return (
-                <button
+                <div
                   key={day.date.toISOString()}
-                  type="button"
                   className={classNames}
                   onClick={() => setSelectedDate(day.date)}
-                  aria-pressed={isSelected}
-                  aria-label={`${day.date.toLocaleDateString("ko-KR")} 일정 선택${ariaHoliday}`}
+                  aria-label={`${day.date.toLocaleDateString("ko-KR")} 일정${ariaHoliday}`}
                 >
-                  <span className={dayNumberClass} title={dayNumberTitle}>
-                    {day.date.getDate()}
-                  </span>
-                  {briefPreview ? (
-                    <span className={styles.dayBrief} title={briefPreview}>
-                      {briefPreview}
+                  <button
+                    type="button"
+                    className={styles.dayNumberButton}
+                    onClick={() => setSelectedDate(day.date)}
+                    aria-pressed={isSelected}
+                    aria-label={`${day.date.toLocaleDateString("ko-KR")} 선택${ariaHoliday}`}
+                  >
+                    <span className={dayNumberClass} title={dayNumberTitle}>
+                      {day.date.getDate()}
                     </span>
-                  ) : null}
-                </button>
+                  </button>
+                  <textarea
+                    className={styles.dayMemoInput}
+                    rows={DAY_MEMO_ROWS}
+                    maxLength={BRIEF_MAX_LENGTH}
+                    value={brief}
+                    onFocus={() => setSelectedDate(day.date)}
+                    onClick={(e) => e.stopPropagation()}
+                    onChange={handleDayMemoChange}
+                    onKeyDown={handleDayMemoKeyDown}
+                    disabled={memosLoading}
+                    aria-label={`${day.date.toLocaleDateString("ko-KR")} 달력 메모`}
+                  />
+                </div>
               );
             })}
           </div>
         </div>
 
         <aside className={styles.memoPanel} aria-label="선택한 날짜 메모">
-          {panelDateLabel ? (
-            <h2 className={styles.memoPanelTitle}>{panelDateLabel}</h2>
-          ) : (
-            <h2 className={styles.memoPanelTitle}>날짜를 선택하세요</h2>
-          )}
-          <p className={styles.memoPanelHint}>
-            달력에서 날짜를 누르면 짧은 메모는 셀에 요약으로 보이고, 아래에서 상세까지 적을 수
-            있습니다. 메모는 서버(PostgreSQL)에 저장됩니다.
-          </p>
-
+          <div className={styles.memoPanelHeader}>
+            {panelDateLabel ? (
+              <h2 className={styles.memoPanelTitle}>{panelDateLabel}</h2>
+            ) : (
+              <h2 className={styles.memoPanelTitle}>날짜를 선택하세요</h2>
+            )}
+            <button
+              type="button"
+              className={styles.buttonDanger}
+              onClick={() => void deleteMemoForSelected()}
+              disabled={!selectedDate || memosLoading}
+            >
+              메모 삭제
+            </button>
+          </div>
           {syncError ? (
             <p className={styles.syncError} role="alert">
               {syncError}
@@ -143,43 +186,13 @@ export function Calendar() {
           ) : null}
           {memosLoading ? <p className={styles.syncHint}>메모 불러오는 중…</p> : null}
 
-          <div className={styles.memoActions}>
-            <button
-              type="button"
-              className={styles.buttonDanger}
-              onClick={() => void deleteMemoForSelected()}
-              disabled={!selectedDate || memosLoading}
-            >
-              이 날짜 메모 삭제
-            </button>
-          </div>
-
-          <label className={styles.fieldLabel} htmlFor="calendar-memo-brief">
-            짧은 메모 <span className={styles.fieldHint}>(달력 셀에 표시)</span>
-          </label>
-          <textarea
-            id="calendar-memo-brief"
-            className={styles.textareaBrief}
-            rows={2}
-            maxLength={BRIEF_MAX_LENGTH}
-            placeholder="예: 팀 회의, 병원"
-            value={selectedDate ? selectedBrief : ""}
-            onChange={(e) => setBriefForSelected(e.target.value)}
-            disabled={!selectedDate || memosLoading}
-            aria-disabled={!selectedDate || memosLoading}
-          />
-          <div className={styles.charCount} aria-live="polite">
-            {selectedDate ? `${selectedBrief.length} / ${BRIEF_MAX_LENGTH}` : ""}
-          </div>
-
           <label className={styles.fieldLabel} htmlFor="calendar-memo-detail">
-            상세 메모
+            메모
           </label>
           <textarea
             id="calendar-memo-detail"
             className={styles.textareaDetail}
             rows={12}
-            placeholder="시간, 장소, 준비물, 메모 등 자유롭게 적어 보세요."
             value={selectedDate ? selectedDetail : ""}
             onChange={(e) => setDetailForSelected(e.target.value)}
             disabled={!selectedDate || memosLoading}
@@ -193,28 +206,10 @@ export function Calendar() {
         {goalsLoading ? (
           <p className={styles.syncHint}>월간·주간 목표 불러오는 중…</p>
         ) : null}
-        <p className={styles.goalsSectionHint}>
-          지금 보고 있는 달({monthLabel})에 대한 목표를 적습니다. 다른 달로 넘기면 해당 달 목표가
-          표시됩니다.
-        </p>
-        <div className={styles.goalsToolbar}>
-          <button
-            type="button"
-            className={[styles.buttonDanger, styles.buttonSmall].filter(Boolean).join(" ")}
-            onClick={() => void deleteMonthlyGoal()}
-            disabled={goalsLoading}
-          >
-            이번 달 월간 목표 삭제
-          </button>
-        </div>
-        <label className={styles.fieldLabel} htmlFor="calendar-monthly-goal">
-          이번 달 목표
-        </label>
         <textarea
           id="calendar-monthly-goal"
           className={styles.goalTextarea}
           rows={3}
-          placeholder="예: 이번 달에 집중할 일, 습관, 마일스톤 등"
           value={monthlyGoal}
           onChange={(e) => setMonthlyGoal(e.target.value)}
           disabled={goalsLoading}
@@ -223,8 +218,7 @@ export function Calendar() {
 
         <h3 className={styles.goalsSubTitle}>주간 목표</h3>
         <p className={styles.goalsSectionHint}>
-          달력 그리드 한 행(일요일~토요일)과 같은 날짜 구간입니다. 라벨은 월일만 표기합니다(예:
-          0329~0404). 입력은 잠시 후 서버에 자동 저장됩니다.
+          달력 그리드 한 행(일요일~토요일)과 같은 날짜 구간입니다.
         </p>
         <ul className={styles.weekGoalList}>
           {weekRanges.map((row) => {
@@ -235,20 +229,11 @@ export function Calendar() {
                   <label className={styles.weekGoalLabel} htmlFor={inputId}>
                     <span className={styles.weekGoalRange}>{row.label}</span>
                   </label>
-                  <button
-                    type="button"
-                    className={[styles.buttonDanger, styles.buttonSmall].filter(Boolean).join(" ")}
-                    onClick={() => void deleteWeeklyGoalForRange(row.rangeKey)}
-                    disabled={goalsLoading}
-                  >
-                    삭제
-                  </button>
                 </div>
                 <textarea
                   id={inputId}
                   className={styles.goalTextarea}
-                  rows={2}
-                  placeholder="이번 주 목표 또는 집중할 일"
+                  rows={3}
                   value={weeklyGoals[row.rangeKey] ?? ""}
                   onChange={(e) => setWeeklyGoalForRange(row.rangeKey, e.target.value)}
                   disabled={goalsLoading}

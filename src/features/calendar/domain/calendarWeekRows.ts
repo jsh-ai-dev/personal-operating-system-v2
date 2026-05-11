@@ -22,7 +22,7 @@ function toCompactMMDD(date: Date): string {
 
 /**
  * `createMonthCalendar`와 동일한 42칸 그리드를 6행(각 7일)으로 나눕니다.
- * 주간 목표 라벨은 달력에 보이는 행과 정확히 일치합니다.
+ * 주간 목표 라벨은 현재 월 날짜를 하나 이상 포함한 달력 행과 일치합니다.
  */
 export function getCalendarWeekRanges(days: CalendarDay[]): CalendarWeekRange[] {
   if (days.length !== EXPECTED_SIZE) {
@@ -33,6 +33,8 @@ export function getCalendarWeekRanges(days: CalendarDay[]): CalendarWeekRange[] 
 
   for (let row = 0; row < CALENDAR_ROWS; row++) {
     const slice = days.slice(row * DAYS_PER_WEEK, row * DAYS_PER_WEEK + DAYS_PER_WEEK);
+    if (!slice.some((day) => day.isCurrentMonth)) continue;
+
     const start = slice[0].date;
     const end = slice[6].date;
     const rangeKey = `${toDateKey(start)}_${toDateKey(end)}`;
