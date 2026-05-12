@@ -21,7 +21,7 @@ export type NoteDto = {
   originalFileName?: string | null;
 };
 
-export type NoteListSort = "recent" | "title" | "relevance";
+export type NoteListSort = "recent" | "created" | "title" | "relevance";
 
 export type ListNotesParams = {
   keyword?: string;
@@ -29,7 +29,7 @@ export type ListNotesParams = {
   sort?: NoteListSort;
   /** Spring 기본 0부터 */
   page?: number;
-  /** 페이지당 개수 (Spring 기본 20) */
+  /** 페이지당 개수 */
   size?: number;
 };
 
@@ -82,7 +82,7 @@ function parseBoolHeader(headers: Headers, name: string): boolean {
 function parseNotesPageResponse(res: Response, notes: NoteDto[]): NotesListPage {
   const h = res.headers;
   const page = parseIntHeader(h, "x-page", 0);
-  const size = parseIntHeader(h, "x-size", 20);
+  const size = parseIntHeader(h, "x-size", 10);
   const totalElements = parseIntHeader(h, "x-total-elements", notes.length);
   const totalPages = Math.max(0, parseIntHeader(h, "x-total-pages", 0));
   return {
@@ -102,7 +102,7 @@ export async function fetchNotesList(params: ListNotesParams = {}): Promise<Note
   if (params.bookmarkedOnly) sp.set("bookmarkedOnly", "true");
   if (params.sort) sp.set("sort", params.sort);
   const page = params.page ?? 0;
-  const size = params.size ?? 20;
+  const size = params.size ?? 10;
   sp.set("page", String(page));
   sp.set("size", String(size));
   const q = sp.toString();

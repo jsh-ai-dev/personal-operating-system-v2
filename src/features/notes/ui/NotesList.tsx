@@ -38,9 +38,9 @@ export function NotesList() {
   const [keyword, setKeyword] = useState("");
   const [debouncedKeyword, setDebouncedKeyword] = useState("");
   const [bookmarkedOnly, setBookmarkedOnly] = useState(false);
-  const [sort, setSort] = useState<NoteListSort>("recent");
+  const [sort, setSort] = useState<NoteListSort>("created");
   const [pageIndex, setPageIndex] = useState(0);
-  const [pageSize, setPageSize] = useState(20);
+  const [pageSize, setPageSize] = useState(10);
   const [totalElements, setTotalElements] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [hasPrevious, setHasPrevious] = useState(false);
@@ -107,10 +107,7 @@ export function NotesList() {
     <section className={styles.page} aria-label="노트 목록">
       <header className={styles.header}>
         <div>
-          <h1 className={styles.title}>노트</h1>
-          <p className={styles.subtitle}>
-            Spring 노트 API와 연결됩니다. 서버가 꺼져 있으면 연결 오류가 날 수 있어요.
-          </p>
+          <h1 className={styles.title}>Notes</h1>
         </div>
         <Link prefetch={false} href="/notes/new" className={styles.primaryButton}>
           새 노트
@@ -121,7 +118,7 @@ export function NotesList() {
         <input
           className={styles.search}
           type="search"
-          placeholder="제목·본문·태그 검색…"
+          placeholder="제목·태그·요약·본문 검색…"
           value={keyword}
           onChange={(e) => setKeyword(e.target.value)}
           aria-label="검색"
@@ -132,7 +129,8 @@ export function NotesList() {
           onChange={(e) => setSort(e.target.value as NoteListSort)}
           aria-label="정렬"
         >
-          <option value="recent">최근 수정순</option>
+          <option value="created">작성일순</option>
+          <option value="recent">수정일순</option>
           <option value="title">제목순</option>
           <option value="relevance">관련도순</option>
         </select>
@@ -155,7 +153,7 @@ export function NotesList() {
             checked={bookmarkedOnly}
             onChange={(e) => setBookmarkedOnly(e.target.checked)}
           />
-          북마크만
+          <span>북마크만</span>
         </label>
       </div>
 
