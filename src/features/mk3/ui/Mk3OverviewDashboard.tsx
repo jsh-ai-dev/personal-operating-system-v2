@@ -6,7 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import styles from "@/features/mk3/ui/Mk3OverviewDashboard.module.css";
 
 type FetchStatus = "pending" | "syncing" | "done" | "login_required" | "error";
-type SyncTarget = "claude" | "chatgpt" | "codex" | "gemini" | "cursor";
+type SyncTarget = "claude" | "chatgpt" | "codex";
 const ORDER_STORAGE_KEY = "mk3_dashboard_service_order_v1";
 
 type AIService = {
@@ -35,16 +35,15 @@ export function Mk3OverviewDashboard() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isRefreshingAll, setIsRefreshingAll] = useState(false);
   const [lastRefreshedAt, setLastRefreshedAt] = useState<number | null>(null);
+  const [hasRefreshedThisSession, setHasRefreshedThisSession] = useState(false);
   const [serviceOrder, setServiceOrder] = useState<string[]>([]);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dropTargetId, setDropTargetId] = useState<string | null>(null);
 
   const [syncStatus, setSyncStatus] = useState<Record<SyncTarget, FetchStatus>>({
+    codex: "pending",
     claude: "pending",
     chatgpt: "pending",
-    codex: "pending",
-    gemini: "pending",
-    cursor: "pending",
   });
 
   async function loadServices() {
@@ -94,16 +93,36 @@ export function Mk3OverviewDashboard() {
     }
   }
 
+  function isBillingPast(name: string): boolean {
+    const service = services.find((s) => s.name === name);
+    if (!service?.next_billing_date) return false;
+    const nextBilling = new Date(service.next_billing_date);
+    nextBilling.setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return nextBilling <= today;
+  }
+
   async function refreshAll() {
     setIsRefreshingAll(true);
     setLoadError(null);
     try {
-      const targets: SyncTarget[] = ["claude", "chatgpt", "codex", "gemini", "cursor"];
-      for (const target of targets) {
-        await runSync(target);
-      }
+      // Codex → Claude → ChatGPT 순서로 순차 갱신 (Chrome CDP 세션 공유로 병렬 불가)
+      const hasCodex = services.some((s) => s.name === "Codex");
+      const hasClaude = services.some((s) => s.name === "Claude");
+
+      if (hasCodex) await runSync("codex");
+      if (hasClaude) await runSync("claude");
+      if (isBillingPast("ChatGPT")) await runSync("chatgpt");
+
       await loadServices();
-      setLastRefreshedAt(Date.now());
+      await fetch("/api/mk3/v1/scraper/meta", { method: "PATCH", credentials: "include" })
+        .then((r) => r.json())
+        .then((body: { last_synced_at?: string | null }) => {
+          if (body.last_synced_at) setLastRefreshedAt(new Date(body.last_synced_at).getTime());
+        })
+        .catch(() => undefined);
+      setHasRefreshedThisSession(true);
     } finally {
       setIsRefreshingAll(false);
     }
@@ -128,6 +147,12 @@ export function Mk3OverviewDashboard() {
 
   useEffect(() => {
     void loadServices();
+    void fetch("/api/mk3/v1/scraper/meta", { credentials: "include" })
+      .then((r) => r.json())
+      .then((body: { last_synced_at?: string | null }) => {
+        if (body.last_synced_at) setLastRefreshedAt(new Date(body.last_synced_at).getTime());
+      })
+      .catch(() => undefined);
   }, []);
 
   useEffect(() => {
@@ -163,9 +188,26 @@ export function Mk3OverviewDashboard() {
     }
   }, [serviceOrder]);
 
+  // 같은 구독을 공유하는 그룹 — 그룹당 첫 번째 항목만 합계에 포함
+  const SUBSCRIPTION_GROUPS = [
+    ["ChatGPT", "Codex"],
+    ["Claude", "Claude Code"],
+  ];
+
+  function deduplicateBySubscription(list: AIService[]): AIService[] {
+    const counted = new Set<number>();
+    return list.filter((s) => {
+      const groupIdx = SUBSCRIPTION_GROUPS.findIndex((g) => g.includes(s.name ?? ""));
+      if (groupIdx === -1) return true;
+      if (counted.has(groupIdx)) return false;
+      counted.add(groupIdx);
+      return true;
+    });
+  }
+
   const totalUSD = useMemo(
     () =>
-      services
+      deduplicateBySubscription(services)
         .filter((s) => s.currency === "USD" && typeof s.monthly_cost === "number")
         .reduce((sum, s) => sum + (s.monthly_cost ?? 0), 0),
     [services],
@@ -173,7 +215,7 @@ export function Mk3OverviewDashboard() {
 
   const totalKRW = useMemo(
     () =>
-      services
+      deduplicateBySubscription(services)
         .filter((s) => s.currency === "KRW" && typeof s.monthly_cost === "number")
         .reduce((sum, s) => sum + (s.monthly_cost ?? 0), 0),
     [services],
@@ -197,7 +239,27 @@ export function Mk3OverviewDashboard() {
 
   function formatUpdatedAt(ts: number | null) {
     if (!ts) return "미실행";
-    return new Date(ts).toLocaleTimeString("ko-KR", { hour12: false });
+    return new Date(ts).toLocaleString("ko-KR", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false });
+  }
+
+  // billing_day 기준으로 다음 결제일 계산 (mk3 AiServiceCard와 동일 로직)
+  // billing_day가 없으면 next_billing_date를 파싱해서 포맷, 둘 다 없으면 null
+  function formatNextBillingDate(service: AIService): string | null {
+    if (service.billing_day) {
+      const today = new Date();
+      let date = new Date(today.getFullYear(), today.getMonth(), service.billing_day);
+      if (date <= today) {
+        date = new Date(today.getFullYear(), today.getMonth() + 1, service.billing_day);
+      }
+      return date.toLocaleDateString("ko-KR", { year: "numeric", month: "long", day: "numeric" });
+    }
+    if (service.next_billing_date) {
+      const parsed = new Date(service.next_billing_date);
+      if (!isNaN(parsed.getTime())) {
+        return parsed.toLocaleDateString("ko-KR", { year: "numeric", month: "long", day: "numeric" });
+      }
+    }
+    return null;
   }
 
   function usagePercent(service: AIService): number | null {
@@ -219,10 +281,10 @@ export function Mk3OverviewDashboard() {
       <header className={styles.header}>
         <h1 className={styles.title}>AI 서비스 현황</h1>
         <div className={styles.headerActions}>
-          <button type="button" className={styles.ghostBtn} onClick={() => void refreshAll()} disabled={loading || isRefreshingAll}>
-            {isRefreshingAll ? "전체 갱신 중..." : "새로고침"}
-          </button>
           <span className={styles.refreshTime}>마지막 갱신: {formatUpdatedAt(lastRefreshedAt)}</span>
+          <button type="button" className={styles.ghostBtn} onClick={() => void refreshAll()} disabled={loading || isRefreshingAll}>
+            {isRefreshingAll ? "↻ 갱신 중..." : "↻ 갱신"}
+          </button>
           <Link href="/mk3/dashboard/ai-services/new" className={styles.addBtn}>
             + 추가
           </Link>
@@ -245,13 +307,15 @@ export function Mk3OverviewDashboard() {
         <span className={styles.count}>{services.length}개 서비스</span>
       </section>
 
-      <section className={styles.syncStatusRow}>
-        {Object.entries(syncStatus).map(([key, value]) => (
-          <span key={key} className={`${styles.syncStatus} ${styles[`sync_${value}`]}`}>
-            {key}: {statusLabel(value)}
-          </span>
-        ))}
-      </section>
+      {(isRefreshingAll || hasRefreshedThisSession) && (
+        <section className={styles.syncStatusRow}>
+          {(["codex", "claude"] as const).map((key) => (
+            <span key={key} className={`${styles.syncStatus} ${styles[`sync_${syncStatus[key]}`]}`}>
+              {key}: {statusLabel(syncStatus[key])}
+            </span>
+          ))}
+        </section>
+      )}
 
       {loadError ? <p className={styles.error}>{loadError}</p> : null}
 
@@ -293,14 +357,14 @@ export function Mk3OverviewDashboard() {
             >
               <h3 className={styles.cardTitle}>{service.name ?? "(unnamed)"}</h3>
               <p className={styles.cardLine}>플랜: {service.plan_name ?? "-"}</p>
-              <p className={styles.cardLine}>통화: {service.currency ?? "-"}</p>
+              <p className={styles.cardLine}>통화: {typeof service.monthly_cost === "number" ? (service.currency ?? "-") : "-"}</p>
               <p className={styles.cardLine}>
                 월요금:{" "}
                 {typeof service.monthly_cost === "number" && service.currency
                   ? moneyText(service.currency, service.monthly_cost)
                   : "-"}
               </p>
-              <p className={styles.cardLine}>다음 결제일: {service.next_billing_date ?? "-"}</p>
+              <p className={styles.cardLine}>다음 결제일: {formatNextBillingDate(service) ?? "-"}</p>
               {typeof service.usage_limit === "number" ? (
                 <div className={styles.usageBox}>
                   <div className={styles.usageHead}>
