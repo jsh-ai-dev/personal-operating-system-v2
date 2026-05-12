@@ -11,7 +11,14 @@ function parseTags(input: string): string[] {
   return input
     .split(/[,，]/)
     .map((s) => s.trim())
-    .filter(Boolean);
+    .filter(Boolean)
+    .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
+}
+
+function formatTags(tags: string[]): string {
+  return [...tags]
+    .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }))
+    .join(", ");
 }
 
 type Props =
@@ -34,7 +41,7 @@ export function NoteForm(props: Props) {
   const [content, setContent] = useState(initial.content);
   const [visibility, setVisibility] = useState<Visibility>(initial.visibility);
   const [tagsText, setTagsText] = useState(
-    props.mode === "edit" ? props.note.tags.join(", ") : "",
+    props.mode === "edit" ? formatTags(props.note.tags) : "",
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -80,7 +87,7 @@ export function NoteForm(props: Props) {
 
       <div className={styles.formRow}>
         <label className={styles.label} htmlFor="note-content">
-          본문 (Markdown)
+          본문
         </label>
         <textarea
           id="note-content"
@@ -124,7 +131,7 @@ export function NoteForm(props: Props) {
           className={styles.input}
           value={tagsText}
           onChange={(e) => setTagsText(e.target.value)}
-          placeholder="예: kotlin, spring, 학습"
+          placeholder="예: apple, banana, coconut"
           autoComplete="off"
         />
       </div>
@@ -132,14 +139,6 @@ export function NoteForm(props: Props) {
       <div className={styles.formActions}>
         <button type="submit" className={styles.primaryButton} disabled={saving}>
           {saving ? "저장 중…" : props.mode === "create" ? "만들기" : "저장"}
-        </button>
-        <button
-          type="button"
-          className={styles.secondaryButton}
-          onClick={() => router.back()}
-          disabled={saving}
-        >
-          취소
         </button>
       </div>
     </form>

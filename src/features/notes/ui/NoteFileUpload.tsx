@@ -31,11 +31,6 @@ export function NoteFileUpload() {
 
   return (
     <div className={styles.uploadPanel}>
-      <div className={styles.uploadTitle}>파일에서 만들기</div>
-      <p className={styles.uploadHint}>
-        .txt는 내용이 노트 본문으로 들어가 바로 편집할 수 있습니다. .pdf는 서버에 원본이 저장되며, 상세에서 내려받을 수
-        있습니다. AI 요약은 백엔드에서 PDF 텍스트를 추출해 처리합니다.
-      </p>
       <div className={styles.uploadRow}>
         <input
           ref={inputRef}
@@ -47,13 +42,18 @@ export function NoteFileUpload() {
         />
         <button
           type="button"
-          className={styles.secondaryButton}
+          className={styles.primaryButton}
           disabled={busy}
           onClick={() => inputRef.current?.click()}
         >
-          {busy ? "업로드 중…" : "파일 선택 (.txt / .pdf)"}
+          {busy ? "업로드 중…" : "파일 업로드 (.txt or .pdf)"}
         </button>
       </div>
+      <p className={styles.uploadHint}>
+        .txt 파일은 문자열로 저장되어 내용을 바로 편집할 수 있습니다.
+        <br />
+        .pdf 파일은 서버에 저장되어 상세에서 열어보거나 다운로드할 수 있습니다.
+      </p>
       {error ? <p className={styles.error}>{error}</p> : null}
     </div>
   );

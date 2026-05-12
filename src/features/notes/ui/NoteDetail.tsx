@@ -70,7 +70,7 @@ export function NoteDetail({ id }: Props) {
     }
   }
 
-  const showDownload = Boolean(note?.originalFileName ?? note?.hasStoredFile);
+  const showDownload = Boolean(note);
 
   async function onBookmark() {
     if (!note) return;
@@ -94,13 +94,7 @@ export function NoteDetail({ id }: Props) {
         <p className={styles.loading}>불러오는 중…</p>
       ) : note ? (
         <>
-          <header className={styles.header} style={{ marginBottom: 16 }}>
-            <div>
-              <h1 className={styles.title} style={{ fontSize: 20 }}>
-                노트 편집
-              </h1>
-              <p className={styles.subtitle}>저장하면 Spring API에 반영됩니다.</p>
-            </div>
+          <header className={styles.header} style={{ marginBottom: 16, justifyContent: "flex-end" }}>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               {showDownload ? (
                 <>
@@ -109,7 +103,7 @@ export function NoteDetail({ id }: Props) {
                     className={styles.secondaryButton}
                     onClick={() => openNoteAttachmentInNewTab(note.id)}
                   >
-                    원본 보기
+                    새 탭에서 보기
                   </button>
                   <button
                     type="button"
@@ -117,7 +111,7 @@ export function NoteDetail({ id }: Props) {
                     disabled={downloading}
                     onClick={() => void onDownloadOriginal()}
                   >
-                    {downloading ? "받는 중…" : "원본 다운로드"}
+                    {downloading ? "받는 중…" : "파일 다운로드"}
                   </button>
                 </>
               ) : null}
@@ -134,8 +128,8 @@ export function NoteDetail({ id }: Props) {
               </button>
             </div>
           </header>
-          <NoteAiSummarySection note={note} onNoteUpdated={(n) => setNote(n)} />
           <NoteForm mode="edit" note={note} onUpdated={(n) => setNote(n)} />
+          <NoteAiSummarySection note={note} onNoteUpdated={(n) => setNote(n)} />
         </>
       ) : null}
     </section>

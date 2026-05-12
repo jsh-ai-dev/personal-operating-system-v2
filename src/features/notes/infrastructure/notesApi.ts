@@ -15,6 +15,10 @@ export type NoteDto = {
   bookmarked: boolean;
   /** 서버에 저장된 AI 요약 (없으면 null/undefined) */
   aiSummary?: string | null;
+  aiSummaryModelTier?: string | null;
+  aiSummaryInputTokens?: number | null;
+  aiSummaryOutputTokens?: number | null;
+  aiSummaryEstimatedCostUsd?: number | null;
   /** PDF 등 원본 바이트를 서버에 둔 노트 */
   hasStoredFile?: boolean;
   /** 파일 업로드로 만들었을 때 원본 파일명 */
@@ -62,6 +66,11 @@ function parseNote(raw: unknown): NoteDto {
     tags: toTags(o.tags),
     bookmarked: Boolean(o.bookmarked),
     aiSummary: o.aiSummary != null ? String(o.aiSummary) : null,
+    aiSummaryModelTier: o.aiSummaryModelTier != null ? String(o.aiSummaryModelTier) : null,
+    aiSummaryInputTokens: o.aiSummaryInputTokens != null ? Number(o.aiSummaryInputTokens) : null,
+    aiSummaryOutputTokens: o.aiSummaryOutputTokens != null ? Number(o.aiSummaryOutputTokens) : null,
+    aiSummaryEstimatedCostUsd:
+      o.aiSummaryEstimatedCostUsd != null ? Number(o.aiSummaryEstimatedCostUsd) : null,
     hasStoredFile: Boolean(o.hasStoredFile),
     originalFileName: o.originalFileName != null ? String(o.originalFileName) : null,
   };
@@ -239,17 +248,20 @@ export async function setBookmark(id: string, bookmarked: boolean): Promise<Note
   return parseNote(data);
 }
 
-export type SummaryModelTier = "flash" | "pro";
+export type SummaryModelTier = "gpt-5-nano" | "gpt-5-mini" | "gpt-5";
 
 export type GenerateSummaryResult = {
   summary: string;
   modelTier: string;
   originalLength: number;
+  inputTokens?: number | null;
+  outputTokens?: number | null;
+  estimatedCostUsd?: number | null;
 };
 
 export async function generateNoteSummary(
   id: string,
-  modelTier: SummaryModelTier = "flash",
+  modelTier: SummaryModelTier = "gpt-5-nano",
 ): Promise<GenerateSummaryResult> {
   const res = await apiFetch(`${getNotesApiBaseUrl()}/v1/notes/${encodeURIComponent(id)}/summary/generate`, {
     method: "POST",
@@ -262,16 +274,30 @@ export async function generateNoteSummary(
   const o = data as Record<string, unknown>;
   return {
     summary: String(o.summary ?? ""),
-    modelTier: String(o.modelTier ?? "flash"),
+    modelTier: String(o.modelTier ?? "gpt-5-nano"),
     originalLength: Number(o.originalLength ?? 0),
+    inputTokens: o.inputTokens != null ? Number(o.inputTokens) : null,
+    outputTokens: o.outputTokens != null ? Number(o.outputTokens) : null,
+    estimatedCostUsd: o.estimatedCostUsd != null ? Number(o.estimatedCostUsd) : null,
   };
 }
 
-export async function saveNoteSummary(id: string, summary: string): Promise<NoteDto> {
+export type SaveNoteSummaryMetadata = {
+  modelTier?: string | null;
+  inputTokens?: number | null;
+  outputTokens?: number | null;
+  estimatedCostUsd?: number | null;
+};
+
+export async function saveNoteSummary(
+  id: string,
+  summary: string,
+  metadata: SaveNoteSummaryMetadata = {},
+): Promise<NoteDto> {
   const res = await apiFetch(`${getNotesApiBaseUrl()}/v1/notes/${encodeURIComponent(id)}/summary/save`, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ summary }),
+    body: JSON.stringify({ summary, ...metadata }),
   });
   if (!res.ok) throw new Error(await parseErrorMessage(res));
   const data: unknown = await res.json();

@@ -216,7 +216,7 @@ export function NotesList() {
                 >
                   {note.visibility === "PUBLIC" ? "공개" : "비공개"}
                 </span>
-                {note.tags.map((tag) => (
+                {[...note.tags].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" })).map((tag) => (
                   <span key={tag} className={styles.tag}>
                     {tag}
                   </span>
