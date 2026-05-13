@@ -16,6 +16,7 @@ type AIServiceFormApi = {
   monthly_cost: number | null;
   currency: string;
   billing_day: number | null;
+  subscribed_at: string | null;
   usage_limit: number | null;
   usage_current: number | null;
   usage_unit: string | null;
@@ -60,6 +61,7 @@ export function Mk3AiServiceForm({ serviceId }: Props) {
     monthly_cost: "",
     currency: "USD",
     billing_day: "",
+    subscribed_at: "",
     usage_limit: "",
     usage_current: "",
     usage_unit: "",
@@ -100,6 +102,13 @@ export function Mk3AiServiceForm({ serviceId }: Props) {
             monthly_cost: typeof body.monthly_cost === "number" ? String(body.monthly_cost) : "",
             currency: typeof body.currency === "string" ? body.currency : "USD",
             billing_day: typeof body.billing_day === "number" ? String(body.billing_day) : "",
+            subscribed_at: (() => {
+              const raw = typeof body.subscribed_at === "string" ? body.subscribed_at : "";
+              if (!raw) return "";
+              const d = new Date(raw);
+              if (isNaN(d.getTime())) return "";
+              return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+            })(),
             usage_limit: typeof body.usage_limit === "number" ? String(body.usage_limit) : "",
             usage_current: typeof body.usage_current === "number" ? String(body.usage_current) : "",
             usage_unit: typeof body.usage_unit === "string" ? body.usage_unit : "",
@@ -142,7 +151,8 @@ export function Mk3AiServiceForm({ serviceId }: Props) {
       plan_name: toStr(form.plan_name),
       monthly_cost: toNum(form.monthly_cost),
       currency: form.currency,
-      billing_day: toNum(form.billing_day),
+      billing_day: null,
+      subscribed_at: form.subscribed_at.trim() || null,
       usage_limit: toNum(form.usage_limit),
       usage_current: toNum(form.usage_current),
       usage_unit: toStr(form.usage_unit),
@@ -258,11 +268,9 @@ export function Mk3AiServiceForm({ serviceId }: Props) {
             <label className={styles.label}>구독일</label>
             <input
               className={styles.input}
-              value={form.billing_day}
-              onChange={(e) => setForm((prev) => ({ ...prev, billing_day: e.target.value }))}
-              type="number"
-              min="1"
-              max="31"
+              value={form.subscribed_at}
+              onChange={(e) => setForm((prev) => ({ ...prev, subscribed_at: e.target.value }))}
+              type="date"
             />
           </div>
 
