@@ -59,6 +59,7 @@
   border-radius: 8px;
   padding: 5px 8px;
 }
+.summaryModel option:disabled { color: #c0c4cc; }
 .summaryBtn {
   border: 1px solid #6366f1;
   background: #fff;
@@ -70,6 +71,18 @@
   font-size: 12px;
   color: #059669;
 }
+.summaryDeleteBtn {
+  margin-left: auto;
+  border: 1px solid #fecaca;
+  background: #fff;
+  color: #ef4444;
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.summaryDeleteBtn:hover { background: #fef2f2; }
+.summaryDeleteBtn:disabled { opacity: 0.4; cursor: default; }
 .summaryLink {
   font-size: 12px;
   color: #4f46e5;
@@ -83,18 +96,30 @@
 }
 .summaryToggle {
   width: 100%;
-  text-align: left;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   border: none;
   background: #f8fafc;
   padding: 8px 10px;
   font-size: 12px;
   color: #64748b;
+  cursor: pointer;
+}
+.summaryMeta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: #94a3b8;
 }
 .summaryBody {
   padding: 10px;
   font-size: 13px;
   white-space: pre-wrap;
   border-top: 1px solid #e2e8f0;
+  max-height: 65vh;
+  overflow-y: auto;
 }
 .summaryBody :global(h2) {
   font-size: 15px;

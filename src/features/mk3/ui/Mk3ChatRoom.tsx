@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
@@ -13,6 +13,7 @@ import {
   setMessageHidden,
   streamChat,
   summarizeConversation,
+  deleteSummary,
   updateMessageContent,
   type AiModel,
   type ChatDoneEvent,
@@ -22,16 +23,19 @@ import {
 import styles from "@/features/mk3/ui/Mk3ChatRoom.module.css";
 
 type Props = { initialId: string };
-const IMPORT_MODELS = new Set(["codex", "claude-code", "claude", "gemini"]);
+const IMPORT_MODELS = new Set(["codex", "claude-code", "claude", "gemini", "chatgpt"]);
 const IMPORT_LABELS: Record<string, string> = {
-  codex: "JetBrains · Codex",
+  codex: "Codex",
   "claude-code": "Claude Code",
-  claude: "Claude.ai",
+  claude: "Claude",
   gemini: "Gemini",
+  chatgpt: "ChatGPT",
 };
 
 export function Mk3ChatRoom({ initialId }: Props) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const backHref = searchParams.get("from") === "summary" ? "/mk3/summaries" : "/mk3/chat";
   const isNew = initialId === "new";
   const [conversationId, setConversationId] = useState<string | null>(isNew ? null : initialId);
   const [conversation, setConversation] = useState<Conversation | null>(null);
@@ -41,6 +45,8 @@ export function Mk3ChatRoom({ initialId }: Props) {
   const [summaryModel, setSummaryModel] = useState("gpt-5-mini");
   const [summary, setSummary] = useState<string | null>(null);
   const [summaryCostUsd, setSummaryCostUsd] = useState<number | null>(null);
+  const [summaryModelUsed, setSummaryModelUsed] = useState<string | null>(null);
+  const [summaryDate, setSummaryDate] = useState<string | null>(null);
   const [summaryOpen, setSummaryOpen] = useState(false);
   const [summarizing, setSummarizing] = useState(false);
   const [input, setInput] = useState("");
@@ -73,6 +79,8 @@ export function Mk3ChatRoom({ initialId }: Props) {
       setMessages(existingMessages);
       setSummary(conv?.summary ?? null);
       setSummaryCostUsd(conv?.summary_cost_usd ?? null);
+      setSummaryModelUsed(conv?.summary_model ?? null);
+      setSummaryDate(conv?.updated_at ?? null);
       if (conv?.summary) setSummaryOpen(false);
     }
     void boot();
@@ -143,6 +151,16 @@ export function Mk3ChatRoom({ initialId }: Props) {
     cancelEdit();
   }
 
+  async function doDeleteSummary() {
+    if (!conversationId || !window.confirm("요약을 삭제할까요?")) return;
+    await deleteSummary(conversationId);
+    setSummary(null);
+    setSummaryCostUsd(null);
+    setSummaryModelUsed(null);
+    setSummaryDate(null);
+    setSummaryOpen(false);
+  }
+
   async function doSummarize() {
     if (!conversationId || summarizing) return;
     setSummarizing(true);
@@ -151,6 +169,8 @@ export function Mk3ChatRoom({ initialId }: Props) {
       const result = await summarizeConversation(conversationId, summaryModel);
       setSummary(result.summary);
       setSummaryCostUsd(result.cost_usd);
+      setSummaryModelUsed(summaryModel);
+      setSummaryDate(new Date().toISOString());
       setSummaryOpen(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : "요약 실패");
@@ -160,6 +180,7 @@ export function Mk3ChatRoom({ initialId }: Props) {
   }
 
   function renderSummary(text: string) {
+    // 기존 저장된 요약 마지막 줄의 "*날짜 | 모델명*" 패턴 제거
     return text
       .replace(/^## (.+)$/gm, "<h2>$1</h2>")
       .replace(/^### (.+)$/gm, "<h3>$1</h3>")
@@ -242,7 +263,7 @@ export function Mk3ChatRoom({ initialId }: Props) {
   return (
     <main className={styles.page}>
       <header className={styles.header}>
-        <Link href="/mk3/chat" className={styles.back}>← 목록으로</Link>
+        <Link href={backHref} className={styles.back}>← 목록으로</Link>
         {!readOnly ? (
           <select className={styles.model} value={selectedModel} onChange={(e) => setSelectedModel(e.target.value)} disabled={streaming || !!conversationId}>
             {models.map((m) => (
@@ -263,19 +284,29 @@ export function Mk3ChatRoom({ initialId }: Props) {
         <div className={styles.summaryBar}>
           <select className={styles.summaryModel} value={summaryModel} onChange={(e) => setSummaryModel(e.target.value)} disabled={summarizing}>
             {summaryModels.map((m) => (
-              <option key={m.id} value={m.id}>{m.id}</option>
+              <option key={m.id} value={m.id} disabled={m.id === "gpt-5"}>{m.id}</option>
             ))}
           </select>
           <button type="button" className={styles.summaryBtn} onClick={() => void doSummarize()} disabled={summarizing}>
             {summarizing ? "요약 중…" : summary ? "재요약" : "요약하기"}
           </button>
           {summaryCostUsd != null ? <span className={styles.summaryCost}>${summaryCostUsd.toFixed(4)}</span> : null}
+          {summary ? (
+            <button type="button" className={styles.summaryDeleteBtn} onClick={() => void doDeleteSummary()} disabled={summarizing}>
+              요약 삭제
+            </button>
+          ) : null}
         </div>
       ) : null}
       {summary ? (
         <div className={styles.summaryPanel}>
           <button type="button" className={styles.summaryToggle} onClick={() => setSummaryOpen((v) => !v)}>
-            {summaryOpen ? "▲ 요약 접기" : "▼ 요약 보기"}
+            <span>{summaryOpen ? "▲ 요약 접기" : "▼ 요약 보기"}</span>
+            <span className={styles.summaryMeta}>
+              {summaryModelUsed && <span>{summaryModelUsed}</span>}
+              {summaryCostUsd != null && <span>${summaryCostUsd.toFixed(4)}</span>}
+              {summaryDate && <span>{new Date(summaryDate).toLocaleString("ko-KR", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>}
+            </span>
           </button>
           {summaryOpen ? <div className={styles.summaryBody} dangerouslySetInnerHTML={{ __html: renderSummary(summary) }} /> : null}
         </div>

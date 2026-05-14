@@ -131,6 +131,14 @@ export async function deleteMessage(id: string): Promise<void> {
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
 }
 
+export async function deleteSummary(id: string): Promise<void> {
+  const res = await fetch(`/api/mk3/v1/chat/conversations/${id}/summary`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+}
+
 export async function summarizeConversation(id: string, model: string): Promise<{
   summary: string;
   tokens_input: number;

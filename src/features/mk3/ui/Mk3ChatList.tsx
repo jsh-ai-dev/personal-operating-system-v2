@@ -75,21 +75,31 @@ export function Mk3ChatList() {
   }
 
   function applyRangePreset(preset: "7d" | "30d" | "month") {
-    const now = new Date();
-    const end = dateOnly(now);
-    if (preset === "month") {
-      const start = new Date(now.getFullYear(), now.getMonth(), 1);
-      setDateFrom(dateOnly(start));
-      setDateTo(end);
-      setSelectedPreset(preset);
+    if (selectedPreset === preset) {
+      setDateFrom("");
+      setDateTo("");
+      setSelectedPreset(null);
+      sessionStorage.removeItem("chatDateFrom");
+      sessionStorage.removeItem("chatDateTo");
+      sessionStorage.removeItem("chatPreset");
       return;
     }
-    const days = preset === "7d" ? 6 : 29;
-    const start = new Date(now);
-    start.setDate(start.getDate() - days);
-    setDateFrom(dateOnly(start));
+    const now = new Date();
+    const end = dateOnly(now);
+    let from = "";
+    if (preset === "month") {
+      from = dateOnly(new Date(now.getFullYear(), now.getMonth(), 1));
+    } else {
+      const start = new Date(now);
+      start.setDate(start.getDate() - (preset === "7d" ? 6 : 29));
+      from = dateOnly(start);
+    }
+    setDateFrom(from);
     setDateTo(end);
     setSelectedPreset(preset);
+    sessionStorage.setItem("chatDateFrom", from);
+    sessionStorage.setItem("chatDateTo", end);
+    sessionStorage.setItem("chatPreset", preset);
   }
 
   const load = useCallback(async () => {
@@ -101,6 +111,19 @@ export function Mk3ChatList() {
       setLoading(false);
     }
   }, [showHidden]);
+
+  useEffect(() => {
+    try {
+      const filters = JSON.parse(sessionStorage.getItem("chatFilters") ?? "[]");
+      if (filters.length) setActiveFilters(filters);
+      const from = sessionStorage.getItem("chatDateFrom") ?? "";
+      const to = sessionStorage.getItem("chatDateTo") ?? "";
+      const preset = sessionStorage.getItem("chatPreset") as "7d" | "30d" | "month" | null;
+      if (from) setDateFrom(from);
+      if (to) setDateTo(to);
+      if (preset) setSelectedPreset(preset);
+    } catch { /* ignore */ }
+  }, []);
 
   useEffect(() => {
     void load();
@@ -181,7 +204,11 @@ export function Mk3ChatList() {
   }
 
   function toggleFilter(key: ServiceFilterKey) {
-    setActiveFilters((prev) => (prev.includes(key) ? prev.filter((v) => v !== key) : [...prev, key]));
+    setActiveFilters((prev) => {
+      const next = prev.includes(key) ? prev.filter((v) => v !== key) : [...prev, key];
+      sessionStorage.setItem("chatFilters", JSON.stringify(next));
+      return next;
+    });
   }
 
   function inDateRange(createdAt: string) {
@@ -265,7 +292,7 @@ export function Mk3ChatList() {
             </button>
           );
         })}
-        <button type="button" className={styles.filterClear} onClick={() => setActiveFilters([])}>
+        <button type="button" className={styles.filterClear} onClick={() => { setActiveFilters([]); sessionStorage.setItem("chatFilters", "[]"); }}>
           선택 해제
         </button>
       </section>
@@ -279,6 +306,8 @@ export function Mk3ChatList() {
             onChange={(e) => {
               setDateFrom(e.target.value);
               setSelectedPreset(null);
+              sessionStorage.setItem("chatDateFrom", e.target.value);
+              sessionStorage.removeItem("chatPreset");
             }}
           />
         </label>
@@ -291,6 +320,8 @@ export function Mk3ChatList() {
             onChange={(e) => {
               setDateTo(e.target.value);
               setSelectedPreset(null);
+              sessionStorage.setItem("chatDateTo", e.target.value);
+              sessionStorage.removeItem("chatPreset");
             }}
           />
         </label>
@@ -322,6 +353,9 @@ export function Mk3ChatList() {
             setDateFrom("");
             setDateTo("");
             setSelectedPreset(null);
+            sessionStorage.removeItem("chatDateFrom");
+            sessionStorage.removeItem("chatDateTo");
+            sessionStorage.removeItem("chatPreset");
           }}
         >
           기간 해제
@@ -337,7 +371,10 @@ export function Mk3ChatList() {
                 {convType(conv).label === "API" && <span>{conv.model}</span>}
                 {convType(conv).label === "API" && <span className={styles.cost}>{formatCost(conv.total_cost_usd)}</span>}
               </div>
-              <div className={styles.titleLine}>{conv.title || "(untitled)"}</div>
+              <div className={styles.titleLine}>
+                {conv.summary && <span className={styles.summaryBadge}>요약</span>}
+                {conv.title || "(untitled)"}
+              </div>
               <div className={styles.sub}>
                 메시지 {conv.message_count}개 · 생성 {new Date(conv.created_at).toLocaleString("ko-KR", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
               </div>

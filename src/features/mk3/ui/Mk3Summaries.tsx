@@ -34,9 +34,9 @@ const SERVICE_FILTERS: Array<{ key: ServiceFilterKey; label: string; emoji: stri
   { key: "cursor", label: "Cursor", emoji: "⌨️" },
 ];
 const OPENAI_MODELS = [
-  { id: "gpt-5-nano", label: "GPT-5 Nano" },
-  { id: "gpt-5-mini", label: "GPT-5 Mini" },
-  { id: "gpt-5", label: "GPT-5" },
+  { id: "gpt-5-nano" },
+  { id: "gpt-5-mini" },
+  { id: "gpt-5" },
 ];
 
 function sourceLabel(conv: Conversation) {
@@ -45,6 +45,7 @@ function sourceLabel(conv: Conversation) {
     "claude-code": "Claude Code",
     claude: "Claude",
     gemini: "Gemini",
+    chatgpt: "ChatGPT",
   };
   if (byModel[conv.model]) return byModel[conv.model];
   const byProvider: Record<string, string> = {
@@ -60,6 +61,7 @@ function conversationFilterKey(conv: Conversation): ServiceFilterKey {
   if (conv.model === "claude-code") return "claude-code";
   if (conv.model === "claude") return "claude-export";
   if (conv.model === "gemini") return "gemini-takeout";
+  if (conv.model === "chatgpt") return "chatgpt";
   if (conv.provider === "openai") return "openai";
   if (conv.provider === "anthropic") return "anthropic";
   if (conv.provider === "google") return "google";
@@ -106,22 +108,45 @@ export function Mk3Summaries() {
   }
 
   function applyRangePreset(preset: "7d" | "30d" | "month") {
-    const now = new Date();
-    const end = dateOnly(now);
-    if (preset === "month") {
-      const start = new Date(now.getFullYear(), now.getMonth(), 1);
-      setDateFrom(dateOnly(start));
-      setDateTo(end);
-      setSelectedPreset(preset);
+    if (selectedPreset === preset) {
+      setDateFrom("");
+      setDateTo("");
+      setSelectedPreset(null);
+      sessionStorage.removeItem("summaryDateFrom");
+      sessionStorage.removeItem("summaryDateTo");
+      sessionStorage.removeItem("summaryPreset");
       return;
     }
-    const days = preset === "7d" ? 6 : 29;
-    const start = new Date(now);
-    start.setDate(start.getDate() - days);
-    setDateFrom(dateOnly(start));
+    const now = new Date();
+    const end = dateOnly(now);
+    let from = "";
+    if (preset === "month") {
+      from = dateOnly(new Date(now.getFullYear(), now.getMonth(), 1));
+    } else {
+      const start = new Date(now);
+      start.setDate(start.getDate() - (preset === "7d" ? 6 : 29));
+      from = dateOnly(start);
+    }
+    setDateFrom(from);
     setDateTo(end);
     setSelectedPreset(preset);
+    sessionStorage.setItem("summaryDateFrom", from);
+    sessionStorage.setItem("summaryDateTo", end);
+    sessionStorage.setItem("summaryPreset", preset);
   }
+
+  useEffect(() => {
+    try {
+      const filters = JSON.parse(sessionStorage.getItem("summaryFilters") ?? "[]");
+      if (filters.length) setActiveFilters(filters);
+      const from = sessionStorage.getItem("summaryDateFrom") ?? "";
+      const to = sessionStorage.getItem("summaryDateTo") ?? "";
+      const preset = sessionStorage.getItem("summaryPreset") as "7d" | "30d" | "month" | null;
+      if (from) setDateFrom(from);
+      if (to) setDateTo(to);
+      if (preset) setSelectedPreset(preset);
+    } catch { /* ignore */ }
+  }, []);
 
   useEffect(() => {
     void listConversations().then(setAll).catch(() => setAll([]));
@@ -180,7 +205,11 @@ export function Mk3Summaries() {
   }
 
   function toggleFilter(key: ServiceFilterKey) {
-    setActiveFilters((prev) => (prev.includes(key) ? prev.filter((v) => v !== key) : [...prev, key]));
+    setActiveFilters((prev) => {
+      const next = prev.includes(key) ? prev.filter((v) => v !== key) : [...prev, key];
+      sessionStorage.setItem("summaryFilters", JSON.stringify(next));
+      return next;
+    });
   }
 
   function selectedQuizModel(conv: Conversation): string {
@@ -220,7 +249,7 @@ export function Mk3Summaries() {
             </button>
           );
         })}
-        <button type="button" className={styles.filterClear} onClick={() => setActiveFilters([])}>
+        <button type="button" className={styles.filterClear} onClick={() => { setActiveFilters([]); sessionStorage.setItem("summaryFilters", "[]"); }}>
           선택 해제
         </button>
       </section>
@@ -234,6 +263,8 @@ export function Mk3Summaries() {
             onChange={(e) => {
               setDateFrom(e.target.value);
               setSelectedPreset(null);
+              sessionStorage.setItem("summaryDateFrom", e.target.value);
+              sessionStorage.removeItem("summaryPreset");
             }}
           />
         </label>
@@ -246,6 +277,8 @@ export function Mk3Summaries() {
             onChange={(e) => {
               setDateTo(e.target.value);
               setSelectedPreset(null);
+              sessionStorage.setItem("summaryDateTo", e.target.value);
+              sessionStorage.removeItem("summaryPreset");
             }}
           />
         </label>
@@ -258,7 +291,7 @@ export function Mk3Summaries() {
         <button type="button" className={`${styles.presetBtn} ${selectedPreset === "month" ? styles.presetBtnActive : ""}`} onClick={() => applyRangePreset("month")}>
           이번 달
         </button>
-        <button type="button" className={styles.filterClear} onClick={() => { setDateFrom(""); setDateTo(""); setSelectedPreset(null); }}>
+        <button type="button" className={styles.filterClear} onClick={() => { setDateFrom(""); setDateTo(""); setSelectedPreset(null); sessionStorage.removeItem("summaryDateFrom"); sessionStorage.removeItem("summaryDateTo"); sessionStorage.removeItem("summaryPreset"); }}>
           기간 해제
         </button>
       </section>
@@ -274,17 +307,13 @@ export function Mk3Summaries() {
                   </span>
                   <span className={styles.modelTag}>{conv.summary_model ?? "-"}</span>
                   <span className={styles.cost}>{formatCost(conv.summary_cost_usd)}</span>
-                  <span className={styles.date}>
-                    생성 {new Date(conv.created_at).toLocaleDateString("ko-KR", {
-                      year: "numeric",
-                      month: "short",
-                      day: "numeric",
-                    })}
-                  </span>
-                  <Link href={`/mk3/chat/${conv.id}`} className={styles.viewLink}>대화 보기 →</Link>
+                  <Link href={`/mk3/chat/${conv.id}?from=summary`} className={`${styles.viewLink} ${styles.viewLinkRight}`}>대화 보기 →</Link>
                 </div>
                 <div className={styles.titleRow}>
                   <span className={styles.cardTitle}>{conv.title}</span>
+                </div>
+                <div className={styles.dateMeta}>
+                  <span>채팅 {new Date(conv.created_at).toLocaleDateString("ko-KR", { year: "numeric", month: "short", day: "numeric" })} · 요약 {new Date(conv.updated_at).toLocaleDateString("ko-KR", { year: "numeric", month: "short", day: "numeric" })}</span>
                   <button type="button" className={styles.expandBtn} onClick={() => toggleExpand(conv.id)}>
                     {expanded.has(conv.id) ? "▲ 접기" : "▼ 내용 보기"}
                   </button>
@@ -300,8 +329,8 @@ export function Mk3Summaries() {
                       disabled={quizGenerating.has(conv.id)}
                     >
                       {OPENAI_MODELS.map((m) => (
-                        <option key={m.id} value={m.id}>
-                          {m.label}
+                        <option key={m.id} value={m.id} disabled={m.id === "gpt-5"}>
+                          {m.id}
                         </option>
                       ))}
                     </select>

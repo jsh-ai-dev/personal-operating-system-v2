@@ -1,6 +1,6 @@
 .page {
-  max-width: 780px;
-  margin: 30px auto;
+  max-width: 760px;
+  margin: 28px auto;
   padding: 0 20px;
 }
 .header {
@@ -8,7 +8,7 @@
   justify-content: flex-start;
   align-items: center;
   gap: 12px;
-  margin-bottom: 12px;
+  margin-bottom: 18px;
 }
 .title {
   margin: 0;
@@ -17,7 +17,7 @@
 .list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 .filterRow {
   display: flex;
@@ -34,11 +34,23 @@
   padding: 5px 10px;
   font-size: 12px;
   cursor: pointer;
+  transition: transform 0.06s ease, box-shadow 0.12s ease, background-color 0.12s ease;
 }
 .filterChipActive {
   border-color: #6366f1;
   color: #4f46e5;
   background: #eef2ff;
+}
+.filterChip:active {
+  transform: translateY(1px) scale(0.98);
+  background: #e2e8f0;
+}
+.filterClear {
+  border-style: dashed;
+}
+.filterClear:active {
+  transform: translateY(1px) scale(0.98);
+  background: #e2e8f0;
 }
 .dateFilterRow {
   display: flex;
@@ -62,8 +74,7 @@
   color: #334155;
   background: #fff;
 }
-.presetBtn,
-.filterClear {
+.presetBtn {
   border: 1px solid #cbd5e1;
   background: #fff;
   color: #475569;
@@ -71,11 +82,16 @@
   padding: 5px 10px;
   font-size: 12px;
   cursor: pointer;
+  transition: transform 0.06s ease, box-shadow 0.12s ease, background-color 0.12s ease;
 }
 .presetBtnActive {
   border-color: #6366f1;
   color: #4f46e5;
   background: #eef2ff;
+}
+.presetBtn:active {
+  transform: translateY(1px) scale(0.98);
+  background: #e2e8f0;
 }
 .filterClear {
   border-style: dashed;
@@ -89,7 +105,7 @@
 .cardHeader {
   padding: 12px 14px 10px;
   border-bottom: 1px solid #f1f5f9;
-  background: #fafafa;
+  background: #fff;
 }
 .meta {
   display: flex;
@@ -102,7 +118,7 @@
   padding: 2px 7px;
   border-radius: 4px;
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
   background: #f3f4f6;
   color: #374151;
 }
@@ -119,13 +135,22 @@
   color: #475569;
 }
 .cost {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   color: #059669;
 }
 .date {
   font-size: 11px;
   color: #94a3b8;
+}
+.dateMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+  color: #94a3b8;
+  margin-top: 4px;
 }
 .titleRow {
   display: flex;
@@ -135,7 +160,6 @@
 }
 .cardTitle {
   font-size: 14px;
-  font-weight: 600;
   color: #0f172a;
 }
 .viewLink {
@@ -161,6 +185,7 @@
   color: #334155;
   background: #fff;
 }
+.quizSelect option:disabled { color: #c0c4cc; }
 .quizBtn {
   border: 1px solid #6366f1;
   border-radius: 8px;
@@ -202,6 +227,9 @@
   font-size: 12px;
   padding: 0;
   cursor: pointer;
+}
+.viewLinkRight {
+  margin-left: auto;
 }
 .empty {
   margin-top: 60px;
