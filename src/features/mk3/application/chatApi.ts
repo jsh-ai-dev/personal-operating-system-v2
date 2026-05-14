@@ -171,6 +171,14 @@ export async function generateQuiz(id: string, model: string): Promise<{
   return readJsonSafe(res, { quiz: [], tokens_input: 0, tokens_output: 0, cost_usd: 0 });
 }
 
+export async function deleteQuiz(id: string): Promise<void> {
+  const res = await fetch(`/api/mk3/v1/chat/conversations/${id}/quiz`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+}
+
 export async function importConversations(
   target: "jetbrains-codex" | "claude-export" | "claude-code" | "gemini-takeout" | "chatgpt-export",
 ) {

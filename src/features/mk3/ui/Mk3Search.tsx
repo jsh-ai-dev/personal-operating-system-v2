@@ -5,27 +5,39 @@ import { useState } from "react";
 import { indexAllConversations, searchConversations, type IndexResponse, type SearchResult } from "@/features/mk3/application/searchApi";
 import styles from "@/features/mk3/ui/Mk3Search.module.css";
 
-function badgeClass(model: string): string {
-  if (model.startsWith("gpt") || model.startsWith("o1") || model.startsWith("o3")) return styles.badgeOpenai;
-  if (model.startsWith("claude")) return styles.badgeAnthropic;
-  if (model.startsWith("gemini")) return styles.badgeGoogle;
-  if (model === "codex") return styles.badgeJetbrains;
-  return styles.badgeDefault;
+function sourceLabel(model: string, provider: string): string {
+  const byModel: Record<string, string> = {
+    codex: "Codex",
+    "claude-code": "Claude Code",
+    claude: "Claude",
+    gemini: "Gemini",
+    chatgpt: "ChatGPT",
+  };
+  if (byModel[model]) return byModel[model];
+  const byProvider: Record<string, string> = {
+    openai: "ChatGPT API",
+    anthropic: "Claude API",
+    google: "Gemini API",
+  };
+  return byProvider[provider] ?? provider;
 }
 
-function badgeLabel(model: string): string {
-  if (model === "claude-code") return "Claude Code";
-  if (model === "claude") return "Claude (임포트)";
-  if (model === "codex") return "Codex";
-  if (model === "gemini") return "Gemini (임포트)";
-  return model;
+function isApi(model: string): boolean {
+  return !["codex", "claude-code", "claude", "gemini", "chatgpt"].includes(model);
+}
+
+function formatCost(cost: number): string {
+  if (cost === 0) return "$0";
+  if (cost < 0.0001) return "<$0.0001";
+  return `$${cost.toFixed(4)}`;
 }
 
 function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("ko-KR", {
-    year: "numeric",
+  return new Date(iso).toLocaleString("ko-KR", {
     month: "short",
     day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
   });
 }
 
@@ -112,7 +124,7 @@ export function Mk3Search() {
           type="text"
           className={styles.searchInput}
           autoComplete="off"
-          placeholder="예: React 훅 최적화, Docker 네트워크 설정, FastAPI 의존성 주입..."
+          placeholder="예: MSA 서비스 간 트랜잭션 처리, AWS 보안 그룹 설정, AI 시스템 프롬프트 작성법..."
           onKeyDown={handleEnterPress}
         />
         <button
@@ -144,14 +156,13 @@ export function Mk3Search() {
               {results.map((result) => (
                 <article key={result.conversation_id} className={styles.resultCard}>
                   <div className={styles.resultMeta}>
-                    <span className={`${styles.badge} ${badgeClass(result.model)}`}>{badgeLabel(result.model)}</span>
-                    <span className={styles.date}>{formatDate(result.created_at)}</span>
-                    <span className={styles.score} style={{ color: scoreColor(result.score) }}>
-                      유사도 {scorePercent(result.score)}
-                    </span>
-                  </div>
-                  <div className={styles.resultTitleRow}>
-                    <span className={styles.resultTitle}>{result.title}</span>
+                    <div className={styles.resultMetaLeft}>
+                      <span className={`${styles.badge} ${styles[`badge_${result.provider}`] ?? ""}`}>
+                        {sourceLabel(result.model, result.provider)}
+                      </span>
+                      {isApi(result.model) && <span className={styles.modelText}>{result.model}</span>}
+                      {isApi(result.model) && <span className={styles.cost}>{formatCost(result.total_cost_usd)}</span>}
+                    </div>
                     <button
                       type="button"
                       className={styles.viewButton}
@@ -159,6 +170,16 @@ export function Mk3Search() {
                     >
                       대화 보기 →
                     </button>
+                  </div>
+                  <div className={styles.titleLine}>
+                    {result.summary && <span className={styles.summaryBadge}>요약</span>}
+                    <span className={styles.resultTitle}>{result.title || "(untitled)"}</span>
+                  </div>
+                  <div className={styles.resultSub}>
+                    <span>메시지 {result.message_count}개 · 생성 {formatDate(result.created_at)}</span>
+                    <span className={styles.score} style={{ color: scoreColor(result.score) }}>
+                      유사도 {scorePercent(result.score)}
+                    </span>
                   </div>
                 </article>
               ))}

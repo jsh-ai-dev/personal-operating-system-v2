@@ -2,6 +2,10 @@ export type SearchResult = {
   conversation_id: string;
   title: string;
   model: string;
+  provider: string;
+  summary: boolean;
+  message_count: number;
+  total_cost_usd: number;
   created_at: string;
   score: number;
 };

@@ -115,14 +115,15 @@
 .resultsList {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
+/* 결과 카드 */
 .resultCard {
   border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  background: #fafafa;
-  padding: 12px 16px;
+  border-radius: 10px;
+  background: #fff;
+  padding: 12px 14px;
   transition: border-color 0.15s ease;
 }
 
@@ -130,73 +131,91 @@
   border-color: #6366f1;
 }
 
+/* 상단: 서비스 배지 + 모델명 + 비용 | 대화 보기 */
 .resultMeta {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
   margin-bottom: 6px;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.resultMetaLeft {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .badge {
   padding: 2px 7px;
   border-radius: 4px;
-  font-size: 0.7rem;
+  font-size: 11px;
   font-weight: 600;
-}
-
-.badgeDefault {
+  line-height: 1;
   background: #f3f4f6;
   color: #374151;
 }
 
-.badgeOpenai {
-  background: #d1fae5;
-  color: #065f46;
+.badge_openai    { background: #d1fae5; color: #065f46; }
+.badge_anthropic { background: #fde68a; color: #78350f; }
+.badge_google    { background: #dbeafe; color: #1e3a8a; }
+.badge_jetbrains { background: #d1fae5; color: #065f46; }
+
+.modelText {
+  color: #64748b;
 }
 
-.badgeAnthropic {
-  background: #fde68a;
-  color: #78350f;
+.cost {
+  color: #059669;
+  font-weight: 700;
 }
 
-.badgeGoogle {
-  background: #dbeafe;
-  color: #1e3a8a;
-}
-
-.badgeJetbrains {
-  background: #d1fae5;
-  color: #065f46;
-}
-
-.date {
-  font-size: 0.75rem;
-  color: #9ca3af;
-}
-
-.score {
-  margin-left: auto;
-  font-size: 0.75rem;
-  font-weight: 600;
-}
-
-.resultTitleRow {
+/* 중단: 요약 배지 + 제목 */
+.titleLine {
+  font-size: 14px;
+  color: #0f172a;
+  margin-bottom: 4px;
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  gap: 12px;
+  gap: 6px;
+}
+
+.summaryBadge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: #f3f4f6;
+  color: #374151;
+  flex-shrink: 0;
 }
 
 .resultTitle {
-  flex: 1;
-  font-size: 0.92rem;
-  color: #111827;
-  font-weight: 500;
+  font-size: 14px;
+  color: #0f172a;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 하단: 메시지 수 + 생성일 | 유사도 */
+.resultSub {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.score {
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .viewButton {
-  font-size: 0.78rem;
+  font-size: 12px;
   color: #6366f1;
   background: transparent;
   border: 0;

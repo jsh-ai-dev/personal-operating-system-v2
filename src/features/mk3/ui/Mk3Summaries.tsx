@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
-import { generateQuiz, type Conversation, listConversations } from "@/features/mk3/application/chatApi";
+import { deleteQuiz, generateQuiz, type Conversation, listConversations } from "@/features/mk3/application/chatApi";
 import styles from "@/features/mk3/ui/Mk3Summaries.module.css";
 
 type ServiceFilterKey =
@@ -310,6 +310,7 @@ export function Mk3Summaries() {
                   <Link href={`/mk3/chat/${conv.id}?from=summary`} className={`${styles.viewLink} ${styles.viewLinkRight}`}>대화 보기 →</Link>
                 </div>
                 <div className={styles.titleRow}>
+                  {conv.quiz?.length ? <span className={styles.quizBadge}>퀴즈</span> : null}
                   <span className={styles.cardTitle}>{conv.title}</span>
                 </div>
                 <div className={styles.dateMeta}>
@@ -341,6 +342,21 @@ export function Mk3Summaries() {
                       <span className={styles.quizCost}>
                         {formatCost(quizCostById[conv.id] ?? conv.quiz_cost_usd ?? null)}
                       </span>
+                    ) : null}
+                    {conv.quiz?.length ? (
+                      <button
+                        type="button"
+                        className={styles.quizDeleteBtn}
+                        disabled={quizGenerating.has(conv.id)}
+                        onClick={async () => {
+                          if (!window.confirm("퀴즈를 삭제할까요?")) return;
+                          await deleteQuiz(conv.id);
+                          setAll((prev) => prev.map((c) => c.id === conv.id ? { ...c, quiz: null, quiz_model: null, quiz_cost_usd: null } : c));
+                          setQuizCostById((prev) => { const next = { ...prev }; delete next[conv.id]; return next; });
+                        }}
+                      >
+                        퀴즈 삭제
+                      </button>
                     ) : null}
                   </div>
                   {quizErrorById[conv.id] ? <p className={styles.quizError}>{quizErrorById[conv.id]}</p> : null}

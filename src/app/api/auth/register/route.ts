@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
     });
   } catch {
     return NextResponse.json(
-      { message: "인증 서버에 연결할 수 없습니다. `npm run dev:auth` 또는 dev:all 로 auth-service(기본 3002)를 띄웠는지 확인하세요." },
+      { message: "인증 서버에 연결할 수 없습니다." },
       { status: 502 },
     );
   }

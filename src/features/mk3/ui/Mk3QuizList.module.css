@@ -1,45 +1,63 @@
 .page {
-  max-width: 780px;
-  margin: 30px auto;
+  max-width: 760px;
+  margin: 28px auto;
   padding: 0 20px;
 }
+
 .header {
   display: flex;
   justify-content: flex-start;
   align-items: center;
   gap: 12px;
-  margin-bottom: 20px;
+  margin-bottom: 18px;
 }
-.title { margin: 0; font-size: 24px; }
-.list { display: flex; flex-direction: column; gap: 14px; }
+
+.title {
+  margin: 0;
+  font-size: 24px;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
 .card {
   border: 1px solid #e5e7eb;
   border-radius: 10px;
   overflow: hidden;
   background: #fff;
 }
+
 .cardHeader {
   padding: 12px 14px 10px;
-  border-bottom: 1px solid #f1f5f9;
-  background: #fafafa;
+  background: #fff;
 }
-.meta { display: flex; gap: 8px; margin-bottom: 6px; align-items: center; flex-wrap: wrap; }
+
+/* 상단: 서비스명 배지, 모델, 비용, 문제 수 | 요약 보기 */
+.meta {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+}
+
 .badge {
   padding: 2px 7px;
   border-radius: 4px;
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
   background: #f3f4f6;
   color: #374151;
 }
-.badgeQuiz {
-  padding: 2px 7px;
-  border-radius: 4px;
-  font-size: 11px;
-  font-weight: 700;
-  background: #e0e7ff;
-  color: #3730a3;
-}
+
+.badge_openai    { background: #d1fae5; color: #065f46; }
+.badge_anthropic { background: #fde68a; color: #78350f; }
+.badge_google    { background: #dbeafe; color: #1e3a8a; }
+.badge_jetbrains { background: #d1fae5; color: #065f46; }
+
 .modelTag {
   padding: 2px 7px;
   border-radius: 4px;
@@ -48,28 +66,69 @@
   background: #f1f5f9;
   color: #475569;
 }
+
 .cost {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   color: #059669;
 }
-.date { font-size: 11px; color: #94a3b8; }
-.summaryLink {
+
+.badgeQuiz {
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  background: #e0e7ff;
+  color: #3730a3;
+}
+
+.viewLink {
   margin-left: auto;
   font-size: 12px;
   color: #4f46e5;
   text-decoration: none;
+  white-space: nowrap;
 }
+
+.viewLink:hover {
+  text-decoration: underline;
+}
+
+/* 중단: 제목 */
 .titleRow {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
+  margin-bottom: 4px;
 }
-.cardTitle { font-size: 14px; font-weight: 600; color: #0f172a; }
-.play {
+
+.cardTitle {
+  font-size: 14px;
+  color: #0f172a;
+}
+
+/* 하단: 날짜 | 퀴즈 풀기 */
+.dateMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+  color: #94a3b8;
+  margin-top: 4px;
+}
+
+.playLink {
   font-size: 12px;
   color: #4f46e5;
   text-decoration: none;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
-.empty { margin-top: 60px; text-align: center; color: #94a3b8; }
+
+.playLink:hover {
+  text-decoration: underline;
+}
+
+.empty {
+  margin-top: 60px;
+  text-align: center;
+  color: #94a3b8;
+}
