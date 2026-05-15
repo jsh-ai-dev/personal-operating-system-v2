@@ -31,12 +31,15 @@
 
 .pageBadge {
   font-size: 0.72rem;
-  background: #ede9fe;
-  color: #5b21b6;
   border-radius: 4px;
   padding: 2px 7px;
   font-weight: 600;
 }
+.pageBadge_1 { background: #fee2e2; color: #991b1b; }
+.pageBadge_2 { background: #fef9c3; color: #854d0e; }
+.pageBadge_3 { background: #dcfce7; color: #166534; }
+.pageBadge_4 { background: #dbeafe; color: #1e3a8a; }
+.pageBadge_5 { background: #ede9fe; color: #5b21b6; }
 
 .dateText {
   font-size: 0.78rem;
@@ -54,24 +57,26 @@
 .tagRow {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 5px;
   margin-bottom: 10px;
 }
 
 .tag {
   font-size: 0.72rem;
+  line-height: 1;
   border-radius: 4px;
-  padding: 2px 7px;
+  padding: 3px 7px;
 }
 
 .company {
-  background: #dbeafe;
-  color: #1e40af;
+  background: #dcfce7;
+  color: #166534;
 }
 
 .topic {
-  background: #f3f4f6;
-  color: #374151;
+  background: #dbeafe;
+  color: #1e3a8a;
 }
 
 .sourceLink {
@@ -118,6 +123,12 @@
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+.modelSelect option:disabled {
+  color: #d9dee7;
+  background: #f8fafc;
+  opacity: 0.35;
 }
 
 .modelSelect {
@@ -185,35 +196,20 @@
   margin: 0 0 12px;
 }
 
-.legend {
-  font-size: 0.78rem;
-  color: #6b7280;
-  margin-bottom: 10px;
+.summary {
+  font-size: 0.88rem;
+  line-height: 1.7;
+  color: #374151;
+  margin: 0;
 }
 
-.numSample {
-  color: #dc2626;
-  font-weight: 600;
-}
-
-.kwSample {
-  color: #2563eb;
-  font-weight: 600;
-}
-
-.highlighted {
-  font-size: 0.85rem;
-  line-height: 1.9;
-  color: #1f2937;
-}
-
-.highlighted :global(.num) {
-  color: #dc2626;
-}
-
-.highlighted :global(.kw) {
-  color: #2563eb;
-}
+/* 하이라이팅 비활성화 — 재활성화 시 아래 주석 해제 */
+/* .legend { font-size: 0.78rem; color: #6b7280; margin-bottom: 10px; } */
+/* .numSample { color: #dc2626; font-weight: 600; } */
+/* .kwSample { color: #2563eb; font-weight: 600; } */
+/* .highlighted { font-size: 0.85rem; line-height: 1.9; color: #1f2937; } */
+/* .highlighted :global(.num) { color: #dc2626; } */
+/* .highlighted :global(.kw) { color: #2563eb; } */
 
 .keywordList {
   display: flex;
@@ -228,22 +224,22 @@
 }
 
 .keywordLabel {
-  font-size: 0.82rem;
-  font-weight: 700;
+  font-size: 0.85rem;
+  font-weight: 600;
   color: #1f2937;
   min-width: 80px;
 }
 
 .keywordDesc {
-  font-size: 0.82rem;
+  font-size: 0.85rem;
   color: #4b5563;
   line-height: 1.6;
 }
 
 .motivation {
   font-size: 0.85rem;
-  line-height: 1.85;
-  color: #1f2937;
+  line-height: 1.7;
+  color: #374151;
   margin: 0;
   white-space: pre-wrap;
 }
@@ -253,18 +249,21 @@
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 
 .qText {
-  margin: 0 0 4px;
+  font-size: 0.85rem;
   font-weight: 600;
+  color: #1f2937;
+  margin: 0 0 4px;
 }
 
 .qAnswer {
-  margin: 0;
+  font-size: 0.85rem;
   color: #6b7280;
-  font-style: italic;
+  line-height: 1.6;
+  margin: 0;
 }
 
 .analyzedAt {

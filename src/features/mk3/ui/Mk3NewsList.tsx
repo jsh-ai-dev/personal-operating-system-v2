@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
-import { getFilterOptions, listNews, scrapeNews, type Article } from "@/features/mk3/application/newsApi";
+import { getFilterOptions, getNewsDates, listNews, scrapeNews, type Article } from "@/features/mk3/application/newsApi";
 import styles from "@/features/mk3/ui/Mk3NewsList.module.css";
 
 function todayDate() {
@@ -13,6 +13,7 @@ function todayDate() {
 
 export function Mk3NewsList() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const queryDate = searchParams.get("date");
   const [selectedDate, setSelectedDate] = useState(queryDate || todayDate());
   const [articles, setArticles] = useState<Article[]>([]);
@@ -23,6 +24,7 @@ export function Mk3NewsList() {
   const [loading, setLoading] = useState(false);
   const [scraping, setScraping] = useState(false);
   const [error, setError] = useState("");
+  const [availableDates, setAvailableDates] = useState<string[]>([]);
 
   const isFiltered = filterCompany !== "all" || filterTag !== "all";
 
@@ -57,6 +59,14 @@ export function Mk3NewsList() {
     }
   }
 
+  async function loadAvailableDates() {
+    try {
+      setAvailableDates(await getNewsDates());
+    } catch {
+      setAvailableDates([]);
+    }
+  }
+
   async function loadArticles() {
     setLoading(true);
     setError("");
@@ -81,8 +91,11 @@ export function Mk3NewsList() {
     setError("");
     try {
       const result = await scrapeNews(selectedDate);
-      setArticles(result);
-      await loadFilterOptions();
+      setArticles(result.articles);
+      await Promise.all([loadFilterOptions(), loadAvailableDates()]);
+      if (result.new_count === 0) {
+        window.alert("새로 수집된 기사가 없습니다.");
+      }
     } catch (error) {
       setError(error instanceof Error ? error.message : "스크랩 중 오류가 발생했습니다.");
     } finally {
@@ -92,6 +105,7 @@ export function Mk3NewsList() {
 
   useEffect(() => {
     void loadFilterOptions();
+    void loadAvailableDates();
   }, []);
 
   useEffect(() => {
@@ -108,13 +122,37 @@ export function Mk3NewsList() {
             type="date"
             className={styles.dateInput}
             value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
+            onChange={(e) => {
+              setSelectedDate(e.target.value);
+              router.replace(`/mk3/news?date=${e.target.value}`);
+            }}
           />
           <button type="button" className={styles.scrapeButton} disabled={scraping} onClick={() => void onScrape()}>
             {scraping ? "수집 중..." : "스크랩"}
           </button>
         </div>
       </header>
+
+      {availableDates.length > 0 && (
+        <div className={styles.datechips}>
+          {availableDates
+            .filter((d) => d.slice(0, 7) === selectedDate.slice(0, 7))
+            .sort()
+            .map((d) => (
+              <button
+                key={d}
+                type="button"
+                className={`${styles.datechip} ${d === selectedDate ? styles.datechipActive : ""}`}
+                onClick={() => {
+                  setSelectedDate(d);
+                  router.replace(`/mk3/news?date=${d}`);
+                }}
+              >
+                {d.slice(5)}
+              </button>
+            ))}
+        </div>
+      )}
 
       <div className={styles.filters}>
         <select value={filterCompany} className={styles.filterSelect} onChange={(e) => setFilterCompany(e.target.value)}>
@@ -161,9 +199,8 @@ export function Mk3NewsList() {
                     className={styles.articleCard}
                   >
                     <div className={styles.articleMeta}>
-                      <span className={styles.pageBadge}>{article.page_num}면</span>
                       <span className={styles.dateText}>{article.date}</span>
-                      {article.analysis ? <span className={styles.analyzedBadge}>분석완료</span> : null}
+                      {article.analysis ? <span className={styles.analyzedBadge}>분석</span> : null}
                     </div>
                     <p className={styles.articleTitle}>{article.title}</p>
                     <div className={styles.articleTags}>
@@ -193,9 +230,8 @@ export function Mk3NewsList() {
                 {items.map((article) => (
                   <Link key={article.id} href={`/mk3/news/${article.id}?date=${article.date}`} className={styles.articleCard}>
                     <div className={styles.articleMeta}>
-                      <span className={styles.pageBadge}>{article.page_num}면</span>
                       <span className={styles.dateText}>{article.date}</span>
-                      {article.analysis ? <span className={styles.analyzedBadge}>분석완료</span> : null}
+                      {article.analysis ? <span className={styles.analyzedBadge}>분석</span> : null}
                     </div>
                     <p className={styles.articleTitle}>{article.title}</p>
                     <div className={styles.articleTags}>

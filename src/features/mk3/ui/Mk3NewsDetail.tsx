@@ -84,7 +84,6 @@ export function Mk3NewsDetail({ id, dateQuery }: { id: string; dateQuery?: strin
 
       <header className={styles.articleHeader}>
         <div className={styles.articleMeta}>
-          <span className={styles.pageBadge}>{article.page_num}면</span>
           <span className={styles.dateText}>{article.date}</span>
         </div>
         <h1 className={styles.articleTitle}>{article.title}</h1>
@@ -125,7 +124,7 @@ export function Mk3NewsDetail({ id, dateQuery }: { id: string; dateQuery?: strin
               disabled={analyzing}
             >
               {models.map((model) => (
-                <option key={model.id} value={model.id}>
+                <option key={model.id} value={model.id} disabled={model.id === "gpt-5"}>
                   {modelLabel(model)}
                 </option>
               ))}
@@ -148,12 +147,8 @@ export function Mk3NewsDetail({ id, dateQuery }: { id: string; dateQuery?: strin
         {!analyzing && article.analysis ? (
           <div className={styles.analysisBody}>
             <div className={styles.block}>
-              <h3>본문 하이라이트</h3>
-              <p className={styles.legend}>
-                <span className={styles.numSample}>빨간 문장</span> 숫자·수치 포함&nbsp;
-                <span className={styles.kwSample}>파란 문장</span> 키워드 포함
-              </p>
-              <div className={styles.highlighted} dangerouslySetInnerHTML={{ __html: article.analysis.highlighted_html }} />
+              <h3>요약</h3>
+              <p className={styles.summary}>{article.analysis.summary}</p>
             </div>
 
             <div className={styles.block}>

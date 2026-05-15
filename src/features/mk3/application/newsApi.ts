@@ -5,7 +5,7 @@ export type NewsModel = {
 };
 
 export type ArticleAnalysis = {
-  highlighted_html: string;
+  summary: string;
   keywords: { keyword: string; explanation: string }[];
   motivation_summary: string;
   questions: { question: string; expected_answer: string }[];
@@ -40,7 +40,7 @@ async function parseDetail(res: Response): Promise<string> {
   return json.detail ?? json.message ?? `HTTP ${res.status}`;
 }
 
-export async function scrapeNews(date: string): Promise<Article[]> {
+export async function scrapeNews(date: string): Promise<{ articles: Article[]; new_count: number }> {
   const res = await fetch("/api/mk3/v1/news/scrape", {
     method: "POST",
     credentials: "include",
@@ -48,7 +48,7 @@ export async function scrapeNews(date: string): Promise<Article[]> {
     body: JSON.stringify({ date }),
   });
   if (!res.ok) throw new Error(await parseDetail(res));
-  return readJsonSafe<Article[]>(res, []);
+  return readJsonSafe<{ articles: Article[]; new_count: number }>(res, { articles: [], new_count: 0 });
 }
 
 export async function listNews(params: {
@@ -64,6 +64,12 @@ export async function listNews(params: {
   const res = await fetch(`/api/mk3/v1/news?${qs.toString()}`, { credentials: "include" });
   if (!res.ok) throw new Error(await parseDetail(res));
   return readJsonSafe<Article[]>(res, []);
+}
+
+export async function getNewsDates(): Promise<string[]> {
+  const res = await fetch("/api/mk3/v1/news/dates", { credentials: "include" });
+  if (!res.ok) throw new Error(await parseDetail(res));
+  return readJsonSafe<string[]>(res, []);
 }
 
 export async function getFilterOptions(): Promise<{ companies: string[]; tags: string[] }> {
