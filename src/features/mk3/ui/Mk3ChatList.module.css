@@ -278,3 +278,69 @@
   justify-content: flex-end;
   gap: 8px;
 }
+
+.fileZone {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+  padding: 10px 12px;
+  border: 1.5px dashed #cbd5e1;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  color: #64748b;
+}
+
+.fileZone:hover {
+  border-color: #6366f1;
+  background: #f5f3ff;
+  color: #4f46e5;
+}
+
+.fileZoneSelected {
+  border-color: #059669;
+  background: #f0fdf4;
+  color: #059669;
+  border-style: solid;
+}
+
+.fileZoneSelected:hover {
+  border-color: #047857;
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.fileZoneDisabled {
+  opacity: 0.5;
+  cursor: default;
+  pointer-events: none;
+}
+
+.fileZoneText {
+  font-size: 13px;
+  font-weight: 500;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fileZoneHint {
+  font-size: 11px;
+  color: #94a3b8;
+  white-space: nowrap;
+}
+
+.fileZoneChange {
+  font-size: 11px;
+  color: inherit;
+  opacity: 0.7;
+  white-space: nowrap;
+}
+
+.importHistoryHint {
+  margin: 6px 0 4px;
+  font-size: 11px;
+  color: #94a3b8;
+}

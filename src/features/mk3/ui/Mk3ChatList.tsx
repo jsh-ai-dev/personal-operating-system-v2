@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
-import { deleteConversation, importConversations, listConversations, setConversationHidden, type Conversation } from "@/features/mk3/application/chatApi";
+import { deleteConversation, getImportHistory, importConversations, listConversations, setConversationHidden, uploadImportFiles, type Conversation } from "@/features/mk3/application/chatApi";
 import styles from "@/features/mk3/ui/Mk3ChatList.module.css";
 
 type ImportKey = "jetbrains-codex" | "claude-export" | "claude-code" | "gemini-takeout" | "chatgpt-export";
@@ -62,6 +62,8 @@ export function Mk3ChatList() {
   const [selectedImportKey, setSelectedImportKey] = useState<string>(
     IMPORT_OPTIONS.find((o) => o.enabled)?.key ?? IMPORT_OPTIONS[0]?.key ?? "",
   );
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [importHistory, setImportHistory] = useState<Record<string, { last_imported_at: string; last_imported_count: number }>>({});
   const [activeFilters, setActiveFilters] = useState<ServiceFilterKey[]>([]);
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
@@ -140,15 +142,37 @@ export function Mk3ChatList() {
       setResult("가져오기 실패");
     } finally {
       setImporting(null);
-      window.setTimeout(() => setResult(""), 2500);
+      window.setTimeout(() => setResult(""), 3000);
     }
   }
+
+  const FILE_INPUT_CONFIG: Record<string, { accept: string; multiple: boolean; hint: string }> = {
+    "chatgpt-export":  { accept: ".json",   multiple: false, hint: "conversations.json" },
+    "claude-export":   { accept: ".json",   multiple: false, hint: "conversations.json" },
+    "gemini-takeout":  { accept: ".json",   multiple: false, hint: "내활동.json" },
+    "claude-code":     { accept: ".jsonl",  multiple: true,  hint: "*.jsonl 파일들" },
+    "jetbrains-codex": { accept: ".events", multiple: true,  hint: "*.events 파일들" },
+  };
 
   async function runSelectedImport() {
     const selected = IMPORT_OPTIONS.find((o) => o.key === selectedImportKey);
     if (!selected?.enabled || !selected.target) return;
-    await runImport(selected.target);
+
     setImportModalOpen(false);
+
+    if (selectedFiles.length > 0) {
+      try {
+        await uploadImportFiles(selected.target, selectedFiles);
+      } catch {
+        setResult("업로드 실패");
+        setSelectedFiles([]);
+        window.setTimeout(() => setResult(""), 3000);
+        return;
+      }
+      setSelectedFiles([]);
+    }
+
+    await runImport(selected.target);
   }
 
   async function toggleHidden(conv: Conversation) {
@@ -239,7 +263,7 @@ export function Mk3ChatList() {
           <button type="button" className={styles.btn} onClick={() => setShowHidden((v) => !v)}>
             {showHidden ? "완료" : "숨김 관리"}
           </button>
-          <button type="button" className={styles.btn} onClick={() => setImportModalOpen(true)} disabled={!!importing}>
+          <button type="button" className={styles.btn} onClick={() => { setImportModalOpen(true); void getImportHistory().then(setImportHistory); }} disabled={!!importing}>
             내역 가져오기
           </button>
           <Link href="/mk3/chat/new" className={styles.btnPrimary}>+ 새 대화</Link>
@@ -249,11 +273,11 @@ export function Mk3ChatList() {
       {importModalOpen ? (
         <div className={styles.modalOverlay} role="dialog" aria-modal="true">
           <div className={styles.modal}>
-            <p className={styles.modalTitle}>가져올 서비스 선택</p>
+            <p className={styles.modalTitle}>내역 가져오기</p>
             <select
               className={styles.modalSelect}
               value={selectedImportKey}
-              onChange={(e) => setSelectedImportKey(e.target.value)}
+              onChange={(e) => { setSelectedImportKey(e.target.value); setSelectedFiles([]); }}
               disabled={!!importing}
             >
               {IMPORT_OPTIONS.map((opt) => (
@@ -262,8 +286,46 @@ export function Mk3ChatList() {
                 </option>
               ))}
             </select>
+            {importHistory[selectedImportKey] && (
+              <p className={styles.importHistoryHint}>
+                마지막 가져오기: {new Date(importHistory[selectedImportKey].last_imported_at).toLocaleString("ko-KR", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })} ({importHistory[selectedImportKey].last_imported_count}개)
+              </p>
+            )}
+            {FILE_INPUT_CONFIG[selectedImportKey] && (
+              <label className={`${styles.fileZone} ${selectedFiles.length > 0 ? styles.fileZoneSelected : ""} ${importing ? styles.fileZoneDisabled : ""}`}>
+                <input
+                  type="file"
+                  accept={FILE_INPUT_CONFIG[selectedImportKey].accept}
+                  multiple={FILE_INPUT_CONFIG[selectedImportKey].multiple}
+                  disabled={!!importing}
+                  onChange={(e) => setSelectedFiles(e.target.files ? Array.from(e.target.files) : [])}
+                  style={{ display: "none" }}
+                />
+                {selectedFiles.length > 0 ? (
+                  <>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                    <span className={styles.fileZoneText}>
+                      {selectedFiles.length === 1 ? selectedFiles[0].name : `${selectedFiles.length}개 선택됨`}
+                    </span>
+                    <span className={styles.fileZoneChange}>변경</span>
+                  </>
+                ) : (
+                  <>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                      <polyline points="17 8 12 3 7 8" />
+                      <line x1="12" y1="3" x2="12" y2="15" />
+                    </svg>
+                    <span className={styles.fileZoneText}>파일 선택</span>
+                    <span className={styles.fileZoneHint}>{FILE_INPUT_CONFIG[selectedImportKey].hint}</span>
+                  </>
+                )}
+              </label>
+            )}
             <div className={styles.modalActions}>
-              <button type="button" className={styles.btn} onClick={() => setImportModalOpen(false)} disabled={!!importing}>
+              <button type="button" className={styles.btn} onClick={() => { setImportModalOpen(false); setSelectedFiles([]); }} disabled={!!importing}>
                 취소
               </button>
               <button
@@ -272,7 +334,7 @@ export function Mk3ChatList() {
                 onClick={() => void runSelectedImport()}
                 disabled={!IMPORT_OPTIONS.find((o) => o.key === selectedImportKey)?.enabled || !!importing}
               >
-                {importing ? "가져오는 중…" : "가져오기"}
+                {importing ? "가져오는 중…" : selectedFiles.length > 0 ? "업로드 & 가져오기" : "가져오기"}
               </button>
             </div>
           </div>

@@ -190,6 +190,27 @@ export async function importConversations(
   return readJsonSafe<{ imported: number; skipped: number; total: number }>(res, { imported: 0, skipped: 0, total: 0 });
 }
 
+export async function getImportHistory(): Promise<Record<string, { last_imported_at: string; last_imported_count: number }>> {
+  const res = await fetch("/api/mk3/v1/import/history", { credentials: "include" });
+  if (!res.ok) return {};
+  return res.json() as Promise<Record<string, { last_imported_at: string; last_imported_count: number }>>;
+}
+
+export async function uploadImportFiles(
+  target: "jetbrains-codex" | "claude-export" | "claude-code" | "gemini-takeout" | "chatgpt-export",
+  files: File[],
+): Promise<{ uploaded: number }> {
+  const formData = new FormData();
+  for (const file of files) formData.append("files", file);
+  const res = await fetch(`/api/mk3/v1/import/upload/${target}`, {
+    method: "POST",
+    credentials: "include",
+    body: formData,
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json() as Promise<{ uploaded: number }>;
+}
+
 export async function getAllModels(): Promise<AiModel[]> {
   const [openai, claude, gemini] = await Promise.all([
     fetch("/api/mk3/v1/chat/openai/models", { credentials: "include" }).then((r) => (r.ok ? r.json() : [] as unknown[])).catch(() => []),
