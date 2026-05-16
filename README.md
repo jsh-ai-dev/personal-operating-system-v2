@@ -1,188 +1,286 @@
-# Personal Operating System — mk2
+# Personal Operating System mk2
 
-TypeScript 풀스택으로 구현한 **개인 운영체제(Personal Operating System)** 시리즈의 웹·API 중심 구현체입니다. Next.js를 단일 진입점(BFF)으로 두고, 본 도메인 API(NestJS)·인증 전용 서비스·기존 Spring 노트 서비스·Python AI 서비스를 **동일한 JWT 주체(`sub`)** 기준으로 묶는 방향으로 설계했습니다.
+TypeScript 풀스택으로 구현한 Personal Operating System 시리즈의 메인 웹/BFF 저장소입니다.
+
+Next.js를 브라우저의 단일 진입점으로 두고, mk2 자체 NestJS API, 분리된 auth-service, mk1 Spring 노트 API, mk3 FastAPI AI API를 동일한 JWT 주체(`sub`) 기준으로 연결합니다.
 
 시리즈 저장소:
 
-- [mk1 — Spring Boot · 노트/검색/파일/AI 요약](https://github.com/jsh-ai-dev/personal-operating-system-mk1)
-- **mk2 — 본 저장소 · Next.js · NestJS · 인증**
-- [mk3 — FastAPI · AI 채팅·임포트·벡터 스토어](https://github.com/jsh-ai-dev/personal-operating-system-mk3)
+- [mk1 - Spring Boot 노트/검색/파일/AI 요약](https://github.com/jsh-ai-dev/personal-operating-system-mk1)
+- [mk2 - 본 저장소, Next.js/NestJS 통합 웹과 인증](https://github.com/jsh-ai-dev/personal-operating-system-mk2)
+- [mk3 - FastAPI AI 대화 저장, 임포트, 검색](https://github.com/jsh-ai-dev/personal-operating-system-mk3)
 
----
+## 한눈에 보기
 
-## 한 줄 요약
+| 구분 | 내용 |
+|---|---|
+| 목적 | 개인 일정/목표/노트/AI 학습 데이터를 하나의 웹 진입점에서 다루는 통합 앱 |
+| 핵심 역할 | Next.js BFF, 인증 쿠키 관리, mk2 API, mk1/mk3 프록시, React UI |
+| 백엔드 | NestJS API와 별도 NestJS auth-service, Prisma/PostgreSQL, Redis |
+| 프론트 | Calendar, Notes, AI Chat, AI Summary, AI Search, AI Quiz, AI News, AI Service Dashboard |
+| 운영 요소 | Docker Compose, Kubernetes, AWS overlay, cert-manager TLS, Traefik HTTPS redirect, ECR 배포 workflow |
 
-**React 19 / Next.js 16(App Router)** 프론트와 **NestJS + Prisma(PostgreSQL)** 백엔드를 같은 모노레포에서 운영하고, **분리된 Auth 서비스**에서 JWT를 발급·무효화하며, 브라우저는 **httpOnly 쿠키 + 서버 프록시**로 하위 서비스(mk1 노트 API, mk3 AI API)와 통신합니다.
-
----
-
-## 시스템 맥락 (MSA 지향)
+## 시스템 구조
 
 ```text
 [Browser]
-    │
-    ▼
+    |
+    v
 [mk2 Next.js :3000]
-    ├─ UI: 달력·노트·mk3 대시보드/채팅/요약/퀴즈
-    ├─ /api/auth/*        → auth-service (로그인·회원가입·로그아웃·전체 세션 무효화)
-    ├─ /api/backend/*     → mk2 NestJS API (일정 메모·목표 등)
-    ├─ /api/notes/*       → mk1 Spring Boot REST (노트 CRUD·파일·요약·검색)
-    └─ /api/mk3/*         → mk3 FastAPI (멀티 LLM 채팅·임포트·스크래퍼 등)
+    ├─ UI: Calendar / Notes / AI Dashboard / AI Chat / Summary / Search / Quiz / News
+    ├─ /api/auth/*        -> auth-service (:3002)
+    ├─ /api/backend/*     -> mk2 NestJS API (:3001)
+    ├─ /api/notes/*       -> mk1 Spring Boot REST (:8080)
+    └─ /api/mk3/*         -> mk3 FastAPI (:8001)
 
-[mk2 NestJS API :3001] — Prisma · JWT 검증 · 레이트 리밋(Redis)
-[auth-service :3002]   — 동일 DB의 User · JWT 발급 · jti 블랙리스트 · 세션 버전(sv) 기반 전체 로그아웃
-
-[mk1 Spring :8080]     — Kotlin · JPA · Elasticsearch · Redis 세션/캐시
-[mk3 FastAPI :8001]    — MongoDB · Qdrant · OpenAI/Gemini/Claude 연동
+[mk2 NestJS API :3001] -> Prisma, PostgreSQL, JWT 검증, Redis rate limit
+[auth-service :3002]   -> 회원가입/로그인, JWT 발급, jti 블랙리스트, 세션 버전
+[mk1 Spring :8080]     -> 노트, 파일, 검색, AI 요약
+[mk3 FastAPI :8001]    -> AI 대화, 임포트, 의미 검색, 뉴스 분석
 ```
 
-mk1은 원격 로그인 시 mk2가 발급한 JWT를 받아 동일 사용자 기준으로 노트 소유권을 분리할 수 있게 구성되어 있습니다.
+브라우저에는 httpOnly 쿠키만 저장하고, Next Route Handler가 쿠키의 토큰을 읽어 하위 서비스로 `Authorization: Bearer` 헤더를 전달합니다. 이 구조 덕분에 mk1/mk3 API를 직접 브라우저에 노출하지 않고 같은 로그인 세션으로 묶을 수 있습니다.
 
----
+## 구현 기능
 
-## 이 저장소(mk2)에서 구현한 것
+### 1. 인증과 BFF
 
-### 프론트엔드 (Next.js)
+- 회원가입, 로그인, 로그아웃
+- 모든 기기 로그아웃: 사용자별 세션 버전(`sv`)을 올려 기존 JWT 무효화
+- 현재 토큰 로그아웃: JWT `jti`를 만료 시각까지 Redis 블랙리스트에 저장
+- middleware에서 보호 라우트 접근 시 auth-service `/api/auth/me`로 세션 검증
+- `/api/backend/*`, `/api/notes/*`, `/api/mk3/*` 프록시에서 hop-by-hop 헤더 제거, 요청 body/응답 stream 전달
+- 하위 서비스 주소는 `BACKEND_URL`, `AUTH_SERVICE_URL`, `NOTES_SERVICE_URL`, `MK3_SERVICE_URL`로 분리
 
-- **인증**: 로그인·회원가입, 로그아웃, **모든 기기 로그아웃**(세션 버전 갱신).
-- **달력**: 월간 그리드, 이전·다음 달·오늘, 날짜별 메모/주간·월간 목표 연동, 한국 공휴일·보정 데이터(`date-holidays` + 로컬 보정).
-- **노트**: mk1 REST를 프록시하는 클라이언트 — 목록·상세·작성/수정, AI 요약·파일 업로드 UI 연동.
-- **mk3 통합 UI**: 대시보드(AI 서비스 설정), 멀티 프로바이더 채팅(SSE 등), 요약·퀴즈 화면 — mk3 API를 동일 BFF로 호출.
+### 2. Calendar / Goals
 
-도메인 로직은 **Clean Architecture 스타일**로 `domain` / `application` / `ui`·`infrastructure`에 나누고, 달력·날짜 키 등은 **Vitest**로 검증합니다.
+- 월간 6주 고정 그리드, 이전/다음 달, 오늘 이동
+- 연/월 선택 컨트롤
+- 날짜별 짧은 메모와 상세 메모
+- 월간 목표, 주간 목표 저장
+- 한국 공휴일 표시: `date-holidays` + 로컬 보정 데이터
+- 달력 도메인 로직과 날짜 키 변환은 프레임워크 밖에서 Vitest로 검증
 
-### 백엔드 (NestJS · `backend/`)
+### 3. Notes 통합
 
-- **Prisma** 기반 모델: `User`, 날짜별 `CalendarMemo`, `MonthlyGoal`, `WeeklyGoal`.
-- **REST**: `memos`, `monthly-goals`, `weekly-goals`, `health`.
-- **보안**: 전역 `JwtAuthGuard`, `@nestjs/throttler` + **Redis 분산 저장소**(`@nest-lab/throttler-storage-redis`) — 인메모리 폴백 지원.
-- **class-validator** DTO, 사용자별 데이터 경계(`CurrentUserId`).
+mk1 REST API를 Next BFF로 프록시해 React 화면에서 사용합니다.
 
-### 인증 서비스 (`auth-service/`)
+- 노트 목록, 상세, 작성, 수정, 삭제
+- 검색어, 북마크 필터, 작성일/수정일/제목/관련도 정렬
+- 페이지 크기 선택과 페이지 번호 UI
+- `.txt`/`.pdf` 업로드
+- PDF/텍스트 원본 새 탭 열기 또는 다운로드
+- 북마크 토글
+- 노트 AI 요약 생성/재생성/저장
+- 요약 모델 tier, 토큰, 예상 비용 표시
 
-- 회원가입·로그인, JWT 발급.
-- **Redis** 기반: JWT `jti` 블랙리스트(로그아웃), 사용자별 **세션 버전**(`sv`) — 버전 불일치 시 무효, “모든 기기 로그아웃”에 사용.
-- User 테이블은 **backend와 동일 Prisma 스키마**를 공유(migrate 단일 소스).
+### 4. mk3 AI 통합 UI
 
-### BFF 패턴 (Next Route Handlers)
+mk3의 Python/FastAPI 기능을 mk2의 React 화면으로 가져와 실사용 메인 UI를 구성했습니다.
 
-- 쿠키의 액세스 토큰을 읽어 하위 서비스 호출 시 **`Authorization: Bearer`** 로 전달.
-- 백엔드·mk1·mk3 URL은 환경 변수로 분리(`BACKEND_URL`, `AUTH_SERVICE_URL`, `NOTES_SERVICE_URL`, `MK3_SERVICE_URL`).
+- AI 서비스 대시보드
+  - ChatGPT, Codex, Claude, Claude Code, Gemini, Copilot, Cursor 등 구독 서비스 CRUD
+  - 월 구독료, 통화, 구독일, 사용량, 청구 URL, 메모 관리
+  - 구독 그룹 중복 비용 제거(ChatGPT/Codex, Claude/Claude Code)
+  - 카드 순서 드래그 저장
+  - Codex/Claude/ChatGPT 스크래퍼 트리거와 마지막 동기화 시각 표시
+- AI Chat
+  - OpenAI/Gemini/Claude SSE 스트리밍 채팅
+  - 모델 목록과 가격/제한 정보 조회
+  - 대화/메시지 숨김, 복원, 수정, 삭제
+  - assistant 메시지별 토큰과 비용 표시
+- 대화 임포트
+  - ChatGPT export, JetBrains Codex `.events`, Gemini Takeout, Claude export, Claude Code `.jsonl`
+  - 파일 업로드 후 S3 기반 임포트 가능
+  - 임포트 히스토리 표시
+  - 서비스별/기간별 필터
+- AI Summary / Quiz
+  - 저장된 대화 요약 목록
+  - OpenAI 모델 선택 후 퀴즈 생성/재생성/삭제
+  - 퀴즈 풀이 화면에서 정답/해설 확인
+- AI Search
+  - mk3 Qdrant 의미 검색
+  - 전체 대화 재인덱싱
+  - 검색/인덱싱 비용 표시
+- AI News
+  - 날짜별 뉴스 스크랩
+  - 기업/태그 필터
+  - 기사 상세와 AI 분석, 예상 질문/답변 확인
+  - 분석 모델 선택과 비용 표시
 
----
-
-## 형제 저장소 요약 (시리즈 전체)
-
-| 저장소 | 역할 | 스택 하이라이트 |
-|--------|------|-----------------|
-| **mk1** | 노트·파일·검색·AI 요약·Thymeleaf UI | Kotlin, Spring Boot 3.5, JPA, PostgreSQL, Redis, Elasticsearch, PDFBox |
-| **mk2** | 통합 웹·일정·목표·인증·BFF | Next.js 16, React 19, NestJS 11, Prisma 7, PostgreSQL, Redis |
-| **mk3** | AI 대화 저장·멀티 LLM·데이터 임포트 | Python, FastAPI, Motor/MongoDB, Qdrant, Nuxt 3(단독 프론트) |
-
-mk3 백엔드 예: OpenAI/Gemini/Claude 채팅·비용 추적, JetBrains Codex·Claude Code·Claude Export·Gemini Takeout 등 **로컬 파일 임포트** API, 스크래퍼·헬스 체크 등.
-
----
-
-## 기술 스택 (mk2)
-
-| 영역 | 기술 |
-|------|------|
-| 프론트 | TypeScript, Next.js 16(App Router), React 19, Vitest, ESLint |
-| API | NestJS 11, Prisma 7, PostgreSQL, class-validator |
-| 인증 | NestJS, Passport JWT, bcrypt, Redis(블랙리스트·세션 버전·스로틀) |
-| 인프라 | Docker Compose(PostgreSQL 16, Redis 7), 멀티 스테이지 Dockerfile(web/api/auth) |
-
----
-
-## 저장소 구조 (요약)
+## 저장소 구조
 
 ```text
 personal-operating-system-mk2/
-├── src/                         # Next.js 앱
-│   ├── app/                     # 라우트·Route Handlers(BFF)
-│   ├── features/
-│   │   ├── calendar/            # domain · application · ui · goals/memos API
-│   │   ├── notes/               # mk1 연동 UI
-│   │   ├── auth/
-│   │   └── mk3/                 # AI 대시보드·채팅·요약·퀴즈
-│   ├── components/              # AppShell 등
-│   └── lib/                     # 서버 URL 헬퍼·API 클라이언트
-├── backend/                     # NestJS 일정·목표 API
-├── auth-service/                # NestJS 인증 전용
-├── prisma 스키마               # backend/prisma (auth-service는 동일 모델 참조)
-├── compose.yaml                # postgres + redis
-└── compose.apps.yaml           # web + api + auth (선택)
+├─ src/                         # Next.js App Router
+│  ├─ app/                      # 페이지와 Route Handlers(BFF)
+│  ├─ components/app-shell/     # 인증 후 공통 레이아웃과 내비게이션
+│  ├─ features/
+│  │  ├─ auth/                  # 로그인/회원가입 UI와 auth API client
+│  │  ├─ calendar/              # domain/application/ui/infrastructure
+│  │  ├─ notes/                 # mk1 노트 UI와 API client
+│  │  └─ mk3/                   # AI Dashboard/Chat/Summary/Search/Quiz/News UI
+│  └─ lib/                      # API client, URL resolver, auth constants
+├─ backend/                     # NestJS 일정/목표 API
+│  ├─ src/memo
+│  ├─ src/goals
+│  ├─ src/auth                  # JWT 검증과 revocation 확인
+│  └─ prisma/                   # User, CalendarMemo, MonthlyGoal, WeeklyGoal
+├─ auth-service/                # NestJS 인증 전용 서비스
+├─ k8s/                         # Kubernetes base/AWS overlay
+├─ compose.yaml                 # PostgreSQL + Redis
+└─ compose.apps.yaml            # web + api + auth 컨테이너
 ```
 
----
+## 백엔드 API
 
-## 실행 방법
+mk2 NestJS API:
 
-### 사전 준비
+| 영역 | Endpoint | 설명 |
+|---|---|---|
+| Health | `GET /api/health`, `GET /api/health/db` | 서버/DB 상태 확인 |
+| Memos | `GET/POST /api/memos`, `GET/PUT/PATCH/DELETE /api/memos/:dateKey` | 날짜별 메모 |
+| Monthly Goals | `GET/PUT/DELETE /api/monthly-goals/:yearMonth` | 월간 목표 |
+| Weekly Goals | `GET /api/weekly-goals/batch`, `GET/PUT/DELETE /api/weekly-goals/:rangeKey` | 주간 목표 |
 
-```bash
+auth-service:
+
+| Endpoint | 설명 |
+|---|---|
+| `POST /api/auth/register` | 회원가입, bcrypt hash 저장, JWT 발급 |
+| `POST /api/auth/login` | 로그인, JWT 발급 |
+| `GET /api/auth/me` | 현재 토큰 검증과 사용자 반환 |
+| `POST /api/auth/logout` | 현재 JWT `jti` 블랙리스트 등록 |
+| `POST /api/auth/sessions/revoke-all` | 모든 기기 로그아웃 |
+
+## 기술 스택
+
+| 영역 | 기술 |
+|---|---|
+| Frontend | TypeScript, Next.js 16 App Router, React 19, CSS Modules |
+| BFF | Next Route Handlers, httpOnly cookie, server-side proxy |
+| API | NestJS 11, Prisma 7, PostgreSQL 16, class-validator |
+| Auth | Passport JWT, bcryptjs, Redis jti blacklist/session version/rate limit |
+| Test | Vitest, Jest, Supertest |
+| Infra | Docker Compose, Kubernetes, Kustomize, cert-manager, Traefik, GitHub Actions, AWS ECR |
+
+## 로컬 실행
+
+### 1. 의존성 설치
+
+```powershell
 npm install
 npm install --prefix backend
 npm install --prefix auth-service
 ```
 
-`backend/.env`에 `DATABASE_URL`, `JWT_SECRET`, `REDIS_URL` 등을 설정하고, Prisma 마이그레이션은 `backend` 기준으로 적용합니다.
+### 2. 환경 파일 준비
 
-### 1) 인프라만 Docker (일상 개발 권장)
-
-```bash
-docker compose up -d
+```powershell
+Copy-Item backend\.env.example backend\.env
+npm run gen:jwt-secret --prefix backend
 ```
 
-- PostgreSQL: `localhost:5433`
-- Redis: `localhost:6380`
+`backend/.env`의 주요 값:
 
-### 2) 웹 + API + Auth 동시 기동
+```text
+DATABASE_URL="postgresql://pos:pos@localhost:5433/pos_mk2?schema=public"
+PORT=3001
+CORS_ORIGIN="http://localhost:3000"
+JWT_SECRET=
+JWT_EXPIRES_IN="7d"
+REDIS_URL="redis://127.0.0.1:6380"
+REDIS_KEY_PREFIX="pos:mk2"
+```
 
-```bash
+mk1/mk3를 함께 연결하려면 Next 실행 환경에 다음 값도 맞춥니다.
+
+```text
+NOTES_SERVICE_URL=http://localhost:8080
+MK3_SERVICE_URL=http://localhost:8001
+AUTH_SERVICE_URL=http://127.0.0.1:3002
+BACKEND_URL=http://127.0.0.1:3001
+```
+
+### 3. 개발용 실행
+
+```powershell
+.\dev.ps1
+```
+
+`dev.ps1`은 PostgreSQL/Redis를 Docker Compose로 올리고, `npm run dev:all`로 web/api/auth를 함께 실행합니다.
+
+수동으로 나눠 실행할 수도 있습니다.
+
+```powershell
+docker compose up -d
 npm run dev:all
 ```
 
+기본 포트:
+
 - Web: `http://localhost:3000`
-- API: `http://localhost:3001` (또는 `backend`의 `PORT` 설정에 따름)
-- Auth: auth-service 설정 포트(예: `3002`)
+- API: `http://localhost:3001`
+- Auth: `http://localhost:3002`
+- PostgreSQL: `localhost:5433`
+- Redis: `localhost:6380`
 
-mk1·mk3를 함께 쓰려면 각각 기동 후, Next 쪽 `NOTES_SERVICE_URL`(기본 예: `http://localhost:8080`), `MK3_SERVICE_URL`(기본 예: `http://localhost:8001`)을 맞춥니다.
+### 4. 앱까지 Docker로 실행
 
-### 3) 앱까지 전부 Docker (배포 연습)
-
-```bash
+```powershell
 npm run docker:up
 npm run docker:up:split
 ```
 
-웹 컨테이너는 `host.docker.internal`로 호스트의 mk1/mk3에 붙도록 예시가 잡혀 있습니다. 정리: `npm run docker:down:split`.
+`compose.apps.yaml`의 web 컨테이너는 기본적으로 호스트의 mk1/mk3에 `host.docker.internal`로 접근하도록 구성되어 있습니다.
 
-### 품질 검사
+## 품질 확인
 
-```bash
+```powershell
 npm run lint
-npm run test                    # Vitest (프론트·도메인)
-npm run test --prefix backend   # Jest (백엔드)
+npm run test                    # Vitest: calendar/date domain
+npm run test --prefix backend   # Jest: Nest backend
+npm run test:e2e --prefix backend
 ```
 
----
+현재 테스트 범위:
 
-## 설계 원칙
+- 달력 도메인: 월 시작일, 6주 고정 그리드, 오늘/현재 월 표시
+- 날짜 키: `YYYY-MM-DD`, `YYYY-MM`
+- 한국 공휴일 보정 데이터
+- Nest e2e: health, DB health
 
-- **경계 분리**: 순수 도메인(달력·날짜 키) ↔ 프레임워크·HTTP.
-- **동일 인증 모델**: JWT `sub`로 mk1·mk2·mk3 사용자 정렬.
-- **운영 관점**: Redis 없을 때의 인메모리 폴백은 개발 편의용이며, 프로덕션에서는 Redis를 권장합니다.
+## 배포와 운영 구성
 
----
+- `Dockerfile.web`, `Dockerfile.api`, `Dockerfile.auth`: web/api/auth 분리 이미지
+- `compose.yaml`: PostgreSQL 16, Redis 7
+- `compose.apps.yaml`: web/api/auth 컨테이너 실행
+- `k8s/base`: Namespace, ConfigMap, Secret 예시, PostgreSQL, Redis, Auth, API, Web, Ingress
+- `k8s/overlays/aws`: 외부 RDS/Redis 연결, ECR 이미지 매핑, Traefik Ingress, cert-manager TLS
+- `k8s/overlays/aws/certificate.mk2.yaml`: `www.jsh-ai-dev.com` TLS 인증서
+- `.github/workflows/ecr-push.yml`: 수동 실행으로 web/api/auth 이미지를 ECR에 push하고 self-hosted runner에서 k3s rollout restart 수행
+- `scripts/aws/check-overlay-placeholders.ps1`: 배포 전 placeholder/약한 기본값 검사
+- `scripts/aws/validate-k8s-learning.ps1`: mk1/mk2/mk3 namespace rollout 검증
 
-## 로드맵 (지향)
+## 개발 흐름
 
-- mk2 Nest 일정 API와 UI의 추가 뷰(주간·일간)·반복 규칙.
-- mk1·mk3와의 통합 배포·관측성(구조화 로그·트레이싱) 정리.
-- 인프라 as Code(k8s 등)와 시리즈 간 계약(OpenAPI) 명시.
+커밋 히스토리는 mk2가 단순 캘린더에서 시리즈의 통합 게이트웨이로 확장된 과정을 보여줍니다.
 
----
+1. Next.js 캘린더 기반과 TypeScript 도메인 테스트로 시작
+2. NestJS/Prisma API를 붙여 메모와 월간/주간 목표를 사용자별로 저장
+3. auth-service 분리, httpOnly 쿠키, JWT `sub`, Redis 블랙리스트/세션 버전 도입
+4. mk1 노트 REST를 BFF로 연결해 노트 목록/상세/파일/AI 요약 UI 통합
+5. mk3 FastAPI를 프록시해 AI 서비스 대시보드, 채팅, 요약, 퀴즈, 의미 검색, 뉴스 분석 화면을 React로 포팅
+6. Docker split stack, Kubernetes base/AWS overlay, TLS/HTTPS redirect, ECR push, k3s 재배포 workflow 정리
+7. 최근에는 캘린더/노트 조작 UI, mk3 Chat/Summary/Search/Quiz/News, 파일 업로드 임포트와 히스토리 표시를 개선
+
+## 관련 문서
+
+- `backend/README.md`: Nest backend 기본 설명
+- `k8s/README.md`: Kubernetes 적용 방법
+- `docs/aws-learning-deployment-runbook.md`: mk1~mk3 AWS 학습 배포 절차
+- `docs/aws-data-services-checklist.md`: RDS, Redis, Elasticsearch, MongoDB, Qdrant 배치 체크리스트
+- `AGENTS.md`, `CLAUDE.md`: 로컬 AI 에이전트 작업 가이드
 
 ## 라이선스
 
