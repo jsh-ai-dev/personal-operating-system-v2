@@ -14,4 +14,5 @@ data:
   BACKEND_URL: "http://mk2-api:3001"
   AUTH_SERVICE_URL: "http://mk2-auth:3002"
   NOTES_SERVICE_URL: "http://mk1-app.pos-mk1.svc.cluster.local:8080"
+  MK3_SERVICE_URL: "http://mk3-api.pos-mk3.svc.cluster.local:8001"
   JWT_EXPIRES_IN: "7d"

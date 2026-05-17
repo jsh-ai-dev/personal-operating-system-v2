@@ -46,6 +46,11 @@ spec:
                 configMapKeyRef:
                   name: mk2-config
                   key: NOTES_SERVICE_URL
+            - name: MK3_SERVICE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: mk2-config
+                  key: MK3_SERVICE_URL
             - name: NODE_ENV
               value: production
             - name: HOSTNAME
