@@ -3,5 +3,5 @@ kind: ConfigMap
 metadata:
   name: mk2-config
 data:
-CORS_ORIGIN: "https://www.jsh-ai-dev.com"
+  CORS_ORIGIN: "https://www.jsh-ai-dev.com"
   NOTES_SERVICE_URL: "http://mk1-app.pos-mk1.svc.cluster.local:8080"

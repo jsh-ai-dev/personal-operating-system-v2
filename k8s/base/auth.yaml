@@ -38,8 +38,8 @@ spec:
                   key: DATABASE_URL
             - name: REDIS_URL
               valueFrom:
-                configMapKeyRef:
-                  name: mk2-config
+                secretKeyRef:
+                  name: mk2-secret
                   key: REDIS_URL
             - name: REDIS_KEY_PREFIX
               valueFrom:
