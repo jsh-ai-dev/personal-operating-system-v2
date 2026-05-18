@@ -26,6 +26,11 @@ import type { DayMemo } from "@/features/calendar/domain/types";
 
 const emptyMemo = (): DayMemo => ({ brief: "", detail: "" });
 
+function saveErrorMessage(error: unknown): string {
+  const detail = error instanceof Error ? error.message : "";
+  return detail ? `저장에 실패했습니다. (${detail})` : "저장에 실패했습니다.";
+}
+
 export function useCalendar() {
   const [viewDate, setViewDate] = useState<Date>(() => getStartOfMonth(new Date()));
   const [selectedDate, setSelectedDate] = useState<Date | null>(() => new Date());
@@ -150,7 +155,7 @@ export function useCalendar() {
   const getBriefForDate = useCallback(
     (date: Date) => {
       const key = toDateKey(date);
-      return memos[key]?.brief?.trim() ?? "";
+      return memos[key]?.brief ?? "";
     },
     [memos],
   );
@@ -158,9 +163,13 @@ export function useCalendar() {
   const flushPersist = useCallback(async (key: string, memo: DayMemo) => {
     try {
       setSyncError(null);
+      if (!memo.brief.trim() && !memo.detail.trim()) {
+        await deleteMemoRemote(key);
+        return;
+      }
       await upsertMemoRemote({ dateKey: key, brief: memo.brief, detail: memo.detail });
-    } catch {
-      setSyncError("저장에 실패했습니다.");
+    } catch (error) {
+      setSyncError(saveErrorMessage(error));
     }
   }, []);
 

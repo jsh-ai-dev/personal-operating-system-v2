@@ -302,7 +302,7 @@ export function Mk3OverviewDashboard() {
             disabled={loading || isRefreshingAll || !scraperRefreshEnabled}
             title={scraperRefreshEnabled ? undefined : "운영에서는 로컬 Chrome CDP 갱신을 사용할 수 없습니다."}
           >
-            {!scraperRefreshEnabled ? "로컬 전용" : isRefreshingAll ? "↻ 갱신 중..." : "↻ 갱신"}
+            {!scraperRefreshEnabled ? "↻ 갱신 (비활성)" : isRefreshingAll ? "↻ 갱신 중..." : "↻ 갱신"}
           </button>
           <Link href="/mk3/dashboard/ai-services/new" className={styles.addBtn}>
             + 추가
@@ -324,14 +324,6 @@ export function Mk3OverviewDashboard() {
           ))}
         </section>
       )}
-
-      {!scraperRefreshEnabled ? (
-        <section className={styles.syncStatusRow}>
-          <span className={`${styles.syncStatus} ${styles.sync_pending}`}>
-            운영에서는 CDP 갱신을 비활성화했습니다.
-          </span>
-        </section>
-      ) : null}
 
       {loadError ? <p className={styles.error}>{loadError}</p> : null}
 

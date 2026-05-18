@@ -56,6 +56,11 @@ spec:
                 configMapKeyRef:
                   name: mk2-config
                   key: MK3_SCRAPER_REFRESH_ENABLED
+            - name: MK3_CHAT_IMPORT_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: mk2-config
+                  key: MK3_CHAT_IMPORT_ENABLED
             - name: DEMO_EMAIL
               valueFrom:
                 secretKeyRef:

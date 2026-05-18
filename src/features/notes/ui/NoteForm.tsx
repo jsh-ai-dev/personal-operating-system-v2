@@ -94,7 +94,6 @@ export function NoteForm(props: Props) {
           className={styles.textarea}
           value={content}
           onChange={(e) => setContent(e.target.value)}
-          required
         />
       </div>
 

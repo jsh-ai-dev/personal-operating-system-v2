@@ -68,6 +68,7 @@ export function Mk3ChatList() {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [selectedPreset, setSelectedPreset] = useState<"7d" | "30d" | "month" | null>(null);
+  const [chatImportEnabled, setChatImportEnabled] = useState(true);
 
   function dateOnly(d: Date) {
     const y = d.getFullYear();
@@ -130,6 +131,15 @@ export function Mk3ChatList() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    void fetch("/api/config/mk3-dashboard", { credentials: "include" })
+      .then((r) => r.json())
+      .then((body: { chatImportEnabled?: boolean }) => {
+        setChatImportEnabled(body.chatImportEnabled !== false);
+      })
+      .catch(() => undefined);
+  }, []);
 
   async function runImport(target: ImportKey) {
     setImporting(target);
@@ -263,8 +273,18 @@ export function Mk3ChatList() {
           <button type="button" className={styles.btn} onClick={() => setShowHidden((v) => !v)}>
             {showHidden ? "완료" : "숨김 관리"}
           </button>
-          <button type="button" className={styles.btn} onClick={() => { setImportModalOpen(true); void getImportHistory().then(setImportHistory); }} disabled={!!importing}>
-            내역 가져오기
+          <button
+            type="button"
+            className={styles.btn}
+            onClick={() => {
+              if (!chatImportEnabled) return;
+              setImportModalOpen(true);
+              void getImportHistory().then(setImportHistory);
+            }}
+            disabled={!!importing || !chatImportEnabled}
+            title={chatImportEnabled ? undefined : "운영에서는 계정별 업로드 격리 전까지 내역 가져오기를 사용할 수 없습니다."}
+          >
+            {chatImportEnabled ? "내역 가져오기" : "내역 가져오기 (비활성)"}
           </button>
           <Link href="/mk3/chat/new" className={styles.btnPrimary}>+ 새 대화</Link>
         </div>

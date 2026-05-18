@@ -18,17 +18,12 @@ function clampExplicitLines(value: string): string {
   return value.split(/\r?\n/).slice(0, DAY_MEMO_ROWS).join("\n");
 }
 
-function clampToTextareaHeight(textarea: HTMLTextAreaElement, value: string): string {
-  let next = clampExplicitLines(value);
-  textarea.value = next;
-
-  while (next.length > 0 && textarea.scrollHeight > textarea.clientHeight) {
-    next = next.slice(0, -1);
-    textarea.value = next;
-  }
-
-  textarea.scrollTop = 0;
-  return next;
+function fitsDayMemoHeight(textarea: HTMLTextAreaElement, value: string): boolean {
+  const originalValue = textarea.value;
+  textarea.value = value;
+  const fits = textarea.scrollHeight <= textarea.clientHeight;
+  textarea.value = originalValue;
+  return fits;
 }
 
 export function Calendar() {
@@ -153,7 +148,12 @@ export function Calendar() {
                 .filter(Boolean)
                 .join(" ");
               const handleDayMemoChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
-                setBriefForDate(day.date, clampToTextareaHeight(e.currentTarget, e.target.value));
+                const next = clampExplicitLines(e.target.value);
+                if (next.length <= brief.length || fitsDayMemoHeight(e.currentTarget, next)) {
+                  setBriefForDate(day.date, next);
+                  return;
+                }
+                e.currentTarget.value = brief;
               };
               const handleDayMemoKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
                 if (e.key !== "Enter") return;
