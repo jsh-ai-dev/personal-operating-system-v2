@@ -59,6 +59,7 @@ export function Mk3ChatRoom({ initialId }: Props) {
   const streamingRef = useRef("");
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const prevMsgCountRef = useRef(0);
+  const initialScrollDoneRef = useRef(false);
 
   function fitEditHeight(el: HTMLTextAreaElement) {
     el.style.height = "auto";
@@ -66,6 +67,9 @@ export function Mk3ChatRoom({ initialId }: Props) {
   }
 
   useEffect(() => {
+    initialScrollDoneRef.current = false;
+    prevMsgCountRef.current = 0;
+
     async function boot() {
       const [allModels, conv, existingMessages] = await Promise.all([
         getAllModels(),
@@ -87,11 +91,19 @@ export function Mk3ChatRoom({ initialId }: Props) {
   }, [conversationId]);
 
   useEffect(() => {
-    if (messages.length > prevMsgCountRef.current) {
-      boxRef.current?.scrollTo({ top: boxRef.current.scrollHeight });
+    const box = boxRef.current;
+    if (!box) return;
+
+    if (!initialScrollDoneRef.current) {
+      if (!isNew && !conversation) return;
+      const shouldStartAtTop = !isNew && IMPORT_MODELS.has(conversation?.model ?? "");
+      box.scrollTo({ top: shouldStartAtTop ? 0 : box.scrollHeight });
+      initialScrollDoneRef.current = true;
+    } else if (messages.length > prevMsgCountRef.current) {
+      box.scrollTo({ top: box.scrollHeight });
     }
     prevMsgCountRef.current = messages.length;
-  }, [messages]);
+  }, [conversation, isNew, messages]);
 
   useEffect(() => {
     if (streamingText) {

@@ -243,7 +243,9 @@
 }
 
 .modal {
-  width: 320px;
+  width: min(520px, calc(100vw - 32px));
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
   background: #fff;
   border: 1px solid #e2e8f0;
   border-radius: 12px;
@@ -343,4 +345,88 @@
   margin: 6px 0 4px;
   font-size: 11px;
   color: #94a3b8;
+}
+
+.uploadListHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 10px 0 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #334155;
+}
+
+.uploadListMeta {
+  font-weight: 400;
+  color: #94a3b8;
+}
+
+.uploadList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.uploadItem {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 8px;
+  cursor: pointer;
+}
+
+.uploadItemSelected {
+  border-color: #6366f1;
+  background: #eef2ff;
+}
+
+.uploadItemBody {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.uploadItemTitle {
+  font-size: 12px;
+  font-weight: 600;
+  color: #0f172a;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.uploadItemMeta {
+  font-size: 11px;
+  color: #64748b;
+}
+
+.uploadDeleteBtn {
+  border: 1px solid #fecaca;
+  background: #fff;
+  color: #dc2626;
+  border-radius: 6px;
+  padding: 4px 7px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.uploadDeleteBtn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.uploadEmpty {
+  margin: 0;
+  padding: 10px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
+  color: #94a3b8;
+  font-size: 12px;
 }

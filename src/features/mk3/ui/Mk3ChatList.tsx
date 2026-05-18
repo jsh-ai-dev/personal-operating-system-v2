@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
-import { deleteConversation, getImportHistory, importConversations, listConversations, setConversationHidden, uploadImportFiles, type Conversation } from "@/features/mk3/application/chatApi";
+import { deleteConversation, deleteImportUpload, getImportHistory, importConversations, listConversations, listImportUploads, setConversationHidden, uploadImportFiles, type Conversation, type ImportUpload } from "@/features/mk3/application/chatApi";
 import styles from "@/features/mk3/ui/Mk3ChatList.module.css";
 
 type ImportKey = "jetbrains-codex" | "claude-export" | "claude-code" | "gemini-takeout" | "chatgpt-export";
@@ -63,12 +63,14 @@ export function Mk3ChatList() {
     IMPORT_OPTIONS.find((o) => o.enabled)?.key ?? IMPORT_OPTIONS[0]?.key ?? "",
   );
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [selectedUploadId, setSelectedUploadId] = useState("");
+  const [importUploads, setImportUploads] = useState<Partial<Record<ImportKey, ImportUpload[]>>>({});
+  const [uploadsLoading, setUploadsLoading] = useState(false);
   const [importHistory, setImportHistory] = useState<Record<string, { last_imported_at: string; last_imported_count: number }>>({});
   const [activeFilters, setActiveFilters] = useState<ServiceFilterKey[]>([]);
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [selectedPreset, setSelectedPreset] = useState<"7d" | "30d" | "month" | null>(null);
-  const [chatImportEnabled, setChatImportEnabled] = useState(true);
 
   function dateOnly(d: Date) {
     const y = d.getFullYear();
@@ -132,20 +134,34 @@ export function Mk3ChatList() {
     void load();
   }, [load]);
 
-  useEffect(() => {
-    void fetch("/api/config/mk3-dashboard", { credentials: "include" })
-      .then((r) => r.json())
-      .then((body: { chatImportEnabled?: boolean }) => {
-        setChatImportEnabled(body.chatImportEnabled !== false);
-      })
-      .catch(() => undefined);
+  const selectedImportOption = IMPORT_OPTIONS.find((o) => o.key === selectedImportKey);
+  const selectedTarget = selectedImportOption?.target;
+
+  const refreshImportUploads = useCallback(async (target: ImportKey) => {
+    setUploadsLoading(true);
+    try {
+      const uploads = await listImportUploads(target);
+      setImportUploads((prev) => ({ ...prev, [target]: uploads }));
+      setSelectedUploadId((current) => current && uploads.some((upload) => upload.upload_id === current) ? current : uploads[0]?.upload_id ?? "");
+    } catch {
+      setImportUploads((prev) => ({ ...prev, [target]: [] }));
+      setSelectedUploadId("");
+    } finally {
+      setUploadsLoading(false);
+    }
   }, []);
 
-  async function runImport(target: ImportKey) {
+  useEffect(() => {
+    if (!importModalOpen || !selectedTarget) return;
+    setSelectedFiles([]);
+    void refreshImportUploads(selectedTarget);
+  }, [importModalOpen, refreshImportUploads, selectedTarget]);
+
+  async function runImport(target: ImportKey, uploadId?: string) {
     setImporting(target);
     setResult("");
     try {
-      const r = await importConversations(target);
+      const r = await importConversations(target, uploadId);
       setResult(r.imported > 0 ? `${r.imported}개 가져옴` : "이미 최신 상태");
       await load();
     } catch {
@@ -165,14 +181,14 @@ export function Mk3ChatList() {
   };
 
   async function runSelectedImport() {
-    const selected = IMPORT_OPTIONS.find((o) => o.key === selectedImportKey);
+    const selected = selectedImportOption;
     if (!selected?.enabled || !selected.target) return;
 
-    setImportModalOpen(false);
-
+    let uploadId: string | undefined;
     if (selectedFiles.length > 0) {
       try {
-        await uploadImportFiles(selected.target, selectedFiles);
+        const upload = await uploadImportFiles(selected.target, selectedFiles);
+        uploadId = upload.upload_id;
       } catch {
         setResult("업로드 실패");
         setSelectedFiles([]);
@@ -180,9 +196,34 @@ export function Mk3ChatList() {
         return;
       }
       setSelectedFiles([]);
+    } else if (selectedUploadId) {
+      uploadId = selectedUploadId;
+    } else {
+      setResult("가져올 업로드 파일을 선택하세요");
+      window.setTimeout(() => setResult(""), 3000);
+      return;
     }
 
-    await runImport(selected.target);
+    setImportModalOpen(false);
+    await runImport(selected.target, uploadId);
+  }
+
+  async function removeImportUpload(upload: ImportUpload) {
+    if (!selectedTarget) return;
+    if (!window.confirm("업로드 원본 파일을 S3에서 삭제할까요?")) return;
+    try {
+      await deleteImportUpload(selectedTarget, upload.upload_id);
+      setImportUploads((prev) => {
+        const nextUploads = (prev[selectedTarget] ?? []).filter((item) => item.upload_id !== upload.upload_id);
+        return { ...prev, [selectedTarget]: nextUploads };
+      });
+      if (selectedUploadId === upload.upload_id) setSelectedUploadId("");
+      setResult("업로드 파일 삭제 완료");
+    } catch {
+      setResult("업로드 파일 삭제 실패");
+    } finally {
+      window.setTimeout(() => setResult(""), 3000);
+    }
   }
 
   async function toggleHidden(conv: Conversation) {
@@ -264,6 +305,7 @@ export function Mk3ChatList() {
       ? conversations
       : conversations.filter((conv) => activeFilters.includes(conversationFilterKey(conv)));
   const filteredConversations = serviceFiltered.filter((conv) => inDateRange(conv.created_at));
+  const currentUploads = selectedTarget ? importUploads[selectedTarget] ?? [] : [];
 
   return (
     <main className={styles.page}>
@@ -277,14 +319,12 @@ export function Mk3ChatList() {
             type="button"
             className={styles.btn}
             onClick={() => {
-              if (!chatImportEnabled) return;
               setImportModalOpen(true);
               void getImportHistory().then(setImportHistory);
             }}
-            disabled={!!importing || !chatImportEnabled}
-            title={chatImportEnabled ? undefined : "운영에서는 계정별 업로드 격리 전까지 내역 가져오기를 사용할 수 없습니다."}
+            disabled={!!importing}
           >
-            {chatImportEnabled ? "내역 가져오기" : "내역 가져오기 (비활성)"}
+            내역 가져오기
           </button>
           <Link href="/mk3/chat/new" className={styles.btnPrimary}>+ 새 대화</Link>
         </div>
@@ -297,7 +337,7 @@ export function Mk3ChatList() {
             <select
               className={styles.modalSelect}
               value={selectedImportKey}
-              onChange={(e) => { setSelectedImportKey(e.target.value); setSelectedFiles([]); }}
+              onChange={(e) => { setSelectedImportKey(e.target.value); setSelectedFiles([]); setSelectedUploadId(""); }}
               disabled={!!importing}
             >
               {IMPORT_OPTIONS.map((opt) => (
@@ -344,6 +384,42 @@ export function Mk3ChatList() {
                 )}
               </label>
             )}
+            <div className={styles.uploadListHeader}>
+              <span>업로드된 파일</span>
+              {uploadsLoading ? <span className={styles.uploadListMeta}>불러오는 중</span> : null}
+            </div>
+            <div className={styles.uploadList}>
+              {currentUploads.length > 0 ? currentUploads.map((upload) => (
+                <label key={upload.upload_id} className={`${styles.uploadItem} ${selectedUploadId === upload.upload_id ? styles.uploadItemSelected : ""}`}>
+                  <input
+                    type="radio"
+                    name="import-upload"
+                    checked={selectedUploadId === upload.upload_id}
+                    onChange={() => { setSelectedUploadId(upload.upload_id); setSelectedFiles([]); }}
+                    disabled={!!importing || selectedFiles.length > 0}
+                  />
+                  <span className={styles.uploadItemBody}>
+                    <span className={styles.uploadItemTitle}>
+                      {upload.filenames.length === 1 ? upload.filenames[0] : `${upload.file_count}개 파일`}
+                    </span>
+                    <span className={styles.uploadItemMeta}>
+                      업로드 {new Date(upload.created_at).toLocaleString("ko-KR", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                      {upload.imported_at ? ` · 가져오기 ${new Date(upload.imported_at).toLocaleString("ko-KR", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}` : ""}
+                    </span>
+                  </span>
+                  <button
+                    type="button"
+                    className={styles.uploadDeleteBtn}
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); void removeImportUpload(upload); }}
+                    disabled={!!importing}
+                  >
+                    삭제
+                  </button>
+                </label>
+              )) : (
+                <p className={styles.uploadEmpty}>아직 업로드된 파일이 없습니다.</p>
+              )}
+            </div>
             <div className={styles.modalActions}>
               <button type="button" className={styles.btn} onClick={() => { setImportModalOpen(false); setSelectedFiles([]); }} disabled={!!importing}>
                 취소
@@ -352,7 +428,7 @@ export function Mk3ChatList() {
                 type="button"
                 className={styles.btnPrimary}
                 onClick={() => void runSelectedImport()}
-                disabled={!IMPORT_OPTIONS.find((o) => o.key === selectedImportKey)?.enabled || !!importing}
+                disabled={!selectedImportOption?.enabled || !!importing || (selectedFiles.length === 0 && !selectedUploadId)}
               >
                 {importing ? "가져오는 중…" : selectedFiles.length > 0 ? "업로드 & 가져오기" : "가져오기"}
               </button>

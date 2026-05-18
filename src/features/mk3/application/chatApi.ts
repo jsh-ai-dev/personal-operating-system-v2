@@ -50,6 +50,17 @@ export type ChatDoneEvent = {
   cost_usd: number;
 };
 
+export type ImportTarget = "jetbrains-codex" | "claude-export" | "claude-code" | "gemini-takeout" | "chatgpt-export";
+
+export type ImportUpload = {
+  upload_id: string;
+  service: ImportTarget;
+  filenames: string[];
+  file_count: number;
+  created_at: string;
+  imported_at: string | null;
+};
+
 export type QuizQuestion = {
   question: string;
   options: string[];
@@ -180,11 +191,18 @@ export async function deleteQuiz(id: string): Promise<void> {
 }
 
 export async function importConversations(
-  target: "jetbrains-codex" | "claude-export" | "claude-code" | "gemini-takeout" | "chatgpt-export",
+  target: ImportTarget,
+  uploadId?: string,
 ) {
   const res = await fetch(`/api/mk3/v1/import/${target}`, {
     method: "POST",
     credentials: "include",
+    ...(uploadId
+      ? {
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ upload_id: uploadId }),
+        }
+      : {}),
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return readJsonSafe<{ imported: number; skipped: number; total: number }>(res, { imported: 0, skipped: 0, total: 0 });
@@ -197,9 +215,9 @@ export async function getImportHistory(): Promise<Record<string, { last_imported
 }
 
 export async function uploadImportFiles(
-  target: "jetbrains-codex" | "claude-export" | "claude-code" | "gemini-takeout" | "chatgpt-export",
+  target: ImportTarget,
   files: File[],
-): Promise<{ uploaded: number }> {
+): Promise<{ uploaded: number; upload_id: string }> {
   const formData = new FormData();
   for (const file of files) formData.append("files", file);
   const res = await fetch(`/api/mk3/v1/import/upload/${target}`, {
@@ -208,7 +226,21 @@ export async function uploadImportFiles(
     body: formData,
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return res.json() as Promise<{ uploaded: number }>;
+  return res.json() as Promise<{ uploaded: number; upload_id: string }>;
+}
+
+export async function listImportUploads(target: ImportTarget): Promise<ImportUpload[]> {
+  const res = await fetch(`/api/mk3/v1/import/uploads/${target}`, { credentials: "include" });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return readJsonSafe<ImportUpload[]>(res, []);
+}
+
+export async function deleteImportUpload(target: ImportTarget, uploadId: string): Promise<void> {
+  const res = await fetch(`/api/mk3/v1/import/uploads/${target}/${uploadId}`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
 }
 
 export async function getAllModels(): Promise<AiModel[]> {

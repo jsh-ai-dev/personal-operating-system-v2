@@ -16,5 +16,4 @@ data:
   NOTES_SERVICE_URL: "http://mk1-app.pos-mk1.svc.cluster.local:8080"
   MK3_SERVICE_URL: "http://mk3-api.pos-mk3.svc.cluster.local:8001"
   MK3_SCRAPER_REFRESH_ENABLED: "true"
-  MK3_CHAT_IMPORT_ENABLED: "true"
   JWT_EXPIRES_IN: "7d"

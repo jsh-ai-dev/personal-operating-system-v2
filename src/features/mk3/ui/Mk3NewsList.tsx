@@ -8,7 +8,12 @@ import { getFilterOptions, getNewsDates, listNews, scrapeNews, type Article } fr
 import styles from "@/features/mk3/ui/Mk3NewsList.module.css";
 
 function todayDate() {
-  return new Date().toISOString().slice(0, 10);
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
 }
 
 export function Mk3NewsList() {
