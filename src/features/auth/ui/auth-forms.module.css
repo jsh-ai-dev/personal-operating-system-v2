@@ -93,6 +93,29 @@
   line-height: 1.6;
 }
 
+.demoButton {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #0f172a;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.demoButton:hover:not(:disabled) {
+  background: #eef2ff;
+  border-color: #93c5fd;
+}
+
+.demoButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .footer {
   margin-top: 18px;
   font-size: 14px;

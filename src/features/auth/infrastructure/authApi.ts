@@ -18,6 +18,15 @@ export async function loginRemote(email: string, password: string): Promise<Auth
   return res.json() as Promise<AuthSessionResponse>;
 }
 
+export async function loginDemo(): Promise<AuthSessionResponse> {
+  const res = await fetch("/api/auth/demo-login", {
+    method: "POST",
+    credentials: "include",
+  });
+  if (!res.ok) throw new Error(await parseErrorMessage(res));
+  return res.json() as Promise<AuthSessionResponse>;
+}
+
 export async function registerRemote(
   email: string,
   password: string,

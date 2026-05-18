@@ -37,6 +37,7 @@ export function Mk3OverviewDashboard() {
   const [isRefreshingAll, setIsRefreshingAll] = useState(false);
   const [lastRefreshedAt, setLastRefreshedAt] = useState<number | null>(null);
   const [hasRefreshedThisSession, setHasRefreshedThisSession] = useState(false);
+  const [scraperRefreshEnabled, setScraperRefreshEnabled] = useState(true);
   const [serviceOrder, setServiceOrder] = useState<string[]>([]);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dropTargetId, setDropTargetId] = useState<string | null>(null);
@@ -105,6 +106,8 @@ export function Mk3OverviewDashboard() {
   }
 
   async function refreshAll() {
+    if (!scraperRefreshEnabled) return;
+
     setIsRefreshingAll(true);
     setLoadError(null);
     try {
@@ -149,6 +152,12 @@ export function Mk3OverviewDashboard() {
 
   useEffect(() => {
     void loadServices();
+    void fetch("/api/config/mk3-dashboard", { credentials: "include" })
+      .then((r) => r.json())
+      .then((body: { scraperRefreshEnabled?: boolean }) => {
+        setScraperRefreshEnabled(body.scraperRefreshEnabled !== false);
+      })
+      .catch(() => undefined);
     void fetch("/api/mk3/v1/scraper/meta", { credentials: "include" })
       .then((r) => r.json())
       .then((body: { last_synced_at?: string | null }) => {
@@ -286,8 +295,14 @@ export function Mk3OverviewDashboard() {
         <h1 className={styles.title}>AI 서비스 현황</h1>
         <div className={styles.headerActions}>
           <span className={styles.refreshTime}>마지막 갱신: {formatUpdatedAt(lastRefreshedAt)}</span>
-          <button type="button" className={styles.ghostBtn} onClick={() => void refreshAll()} disabled={loading || isRefreshingAll}>
-            {isRefreshingAll ? "↻ 갱신 중..." : "↻ 갱신"}
+          <button
+            type="button"
+            className={styles.ghostBtn}
+            onClick={() => void refreshAll()}
+            disabled={loading || isRefreshingAll || !scraperRefreshEnabled}
+            title={scraperRefreshEnabled ? undefined : "운영에서는 로컬 Chrome CDP 갱신을 사용할 수 없습니다."}
+          >
+            {!scraperRefreshEnabled ? "로컬 전용" : isRefreshingAll ? "↻ 갱신 중..." : "↻ 갱신"}
           </button>
           <Link href="/mk3/dashboard/ai-services/new" className={styles.addBtn}>
             + 추가
@@ -309,6 +324,14 @@ export function Mk3OverviewDashboard() {
           ))}
         </section>
       )}
+
+      {!scraperRefreshEnabled ? (
+        <section className={styles.syncStatusRow}>
+          <span className={`${styles.syncStatus} ${styles.sync_pending}`}>
+            운영에서는 CDP 갱신을 비활성화했습니다.
+          </span>
+        </section>
+      ) : null}
 
       {loadError ? <p className={styles.error}>{loadError}</p> : null}
 

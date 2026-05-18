@@ -51,6 +51,21 @@ spec:
                 configMapKeyRef:
                   name: mk2-config
                   key: MK3_SERVICE_URL
+            - name: MK3_SCRAPER_REFRESH_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: mk2-config
+                  key: MK3_SCRAPER_REFRESH_ENABLED
+            - name: DEMO_EMAIL
+              valueFrom:
+                secretKeyRef:
+                  name: mk2-secret
+                  key: DEMO_EMAIL
+            - name: DEMO_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mk2-secret
+                  key: DEMO_PASSWORD
             - name: NODE_ENV
               value: production
             - name: HOSTNAME

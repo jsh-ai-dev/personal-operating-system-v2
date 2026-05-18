@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import { loginRemote } from "@/features/auth/infrastructure/authApi";
+import { loginDemo, loginRemote } from "@/features/auth/infrastructure/authApi";
 
 import styles from "@/features/auth/ui/auth-forms.module.css";
 
@@ -14,6 +14,12 @@ export function LoginForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const [demoPending, setDemoPending] = useState(false);
+
+  function goHome() {
+    router.replace("/calendar");
+    router.refresh();
+  }
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -21,14 +27,28 @@ export function LoginForm() {
     setPending(true);
     try {
       await loginRemote(email, password);
-      router.replace("/calendar");
-      router.refresh();
+      goHome();
     } catch (err) {
       setError(err instanceof Error ? err.message : "로그인에 실패했습니다.");
     } finally {
       setPending(false);
     }
   }
+
+  async function onDemoLogin() {
+    setError(null);
+    setDemoPending(true);
+    try {
+      await loginDemo();
+      goHome();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "데모 로그인에 실패했습니다.");
+    } finally {
+      setDemoPending(false);
+    }
+  }
+
+  const busy = pending || demoPending;
 
   return (
     <div>
@@ -47,7 +67,7 @@ export function LoginForm() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            disabled={pending}
+            disabled={busy}
           />
         </div>
         <div className={styles.field}>
@@ -62,7 +82,7 @@ export function LoginForm() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            disabled={pending}
+            disabled={busy}
           />
         </div>
         {error ? (
@@ -70,14 +90,19 @@ export function LoginForm() {
             {error}
           </p>
         ) : null}
-        <button type="submit" className={styles.submit} disabled={pending}>
-          {pending ? "처리 중…" : "로그인"}
+        <button type="submit" className={styles.submit} disabled={busy}>
+          {pending ? "처리 중..." : "로그인"}
         </button>
       </form>
       <div className={styles.demo}>
-        <p className={styles.demoTitle}>데모 계정</p>
-        <p className={styles.demoInfo}>ID: demo@demo.com</p>
-        <p className={styles.demoInfo}>PW: demo123!</p>
+        <button
+          type="button"
+          className={styles.demoButton}
+          onClick={() => void onDemoLogin()}
+          disabled={busy}
+        >
+          {demoPending ? "데모 로그인 중..." : "데모 계정으로 로그인"}
+        </button>
       </div>
       <p className={styles.footer}>
         계정이 없으신가요? <Link href="/register">회원가입</Link>

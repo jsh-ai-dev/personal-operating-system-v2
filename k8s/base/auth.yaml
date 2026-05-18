@@ -66,6 +66,16 @@ spec:
                 configMapKeyRef:
                   name: mk2-config
                   key: JWT_EXPIRES_IN
+            - name: DEMO_EMAIL
+              valueFrom:
+                secretKeyRef:
+                  name: mk2-secret
+                  key: DEMO_EMAIL
+            - name: DEMO_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mk2-secret
+                  key: DEMO_PASSWORD
             - name: THROTTLE_GLOBAL_LIMIT
               valueFrom:
                 configMapKeyRef:
