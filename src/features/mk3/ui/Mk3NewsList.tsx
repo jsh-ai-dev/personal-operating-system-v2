@@ -4,7 +4,16 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
-import { getFilterOptions, getNewsDates, listNews, scrapeNews, type Article } from "@/features/mk3/application/newsApi";
+import {
+  getFilterOptions,
+  getLatestNewsScrapeJob,
+  getNewsDates,
+  getNewsScrapeJob,
+  listNews,
+  scrapeNews,
+  type Article,
+  type NewsScrapeJob,
+} from "@/features/mk3/application/newsApi";
 import styles from "@/features/mk3/ui/Mk3NewsList.module.css";
 
 function todayDate() {
@@ -14,6 +23,43 @@ function todayDate() {
     month: "2-digit",
     day: "2-digit",
   }).format(new Date());
+}
+
+const SCRAPE_STATUS_LABEL: Record<NewsScrapeJob["status"], string> = {
+  queued: "대기 중",
+  running: "수집 중",
+  completed: "수집 완료",
+  limited: "요청 제한",
+  failed: "수집 실패",
+};
+
+function formatKoreaTime(value: string) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return new Intl.DateTimeFormat("ko-KR", {
+    timeZone: "Asia/Seoul",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+}
+
+function scrapeJobMessage(job: NewsScrapeJob) {
+  if (job.status === "queued") return "수집 작업을 준비하고 있습니다.";
+  if (job.status === "running") {
+    if (job.total > 0) return `${job.processed + 1}번째 기사를 확인하고 있습니다.`;
+    return "기사 목록을 가져오고 있습니다.";
+  }
+  if (job.status === "completed") return "수집이 완료되었습니다.";
+  if (job.status === "limited") {
+    const retryAt = formatKoreaTime(job.cooldown_until);
+    return retryAt
+      ? `네이버가 일시적으로 요청을 제한했습니다. ${retryAt} 이후 다시 시도하세요.`
+      : "네이버가 일시적으로 요청을 제한했습니다. 잠시 후 다시 시도하세요.";
+  }
+  return "수집 중 오류가 발생했습니다. 잠시 후 다시 시도하세요.";
 }
 
 export function Mk3NewsList() {
@@ -30,8 +76,14 @@ export function Mk3NewsList() {
   const [scraping, setScraping] = useState(false);
   const [error, setError] = useState("");
   const [availableDates, setAvailableDates] = useState<string[]>([]);
+  const [scrapeJob, setScrapeJob] = useState<NewsScrapeJob | null>(null);
 
   const isFiltered = filterCompany !== "all" || filterTag !== "all";
+  const activeScrapeJob = scrapeJob?.status === "queued" || scrapeJob?.status === "running";
+  const scrapeProgress =
+    scrapeJob && scrapeJob.total > 0
+      ? Math.min(100, Math.round((scrapeJob.processed / scrapeJob.total) * 100))
+      : 0;
 
   const groupedByPage = useMemo(() => {
     const map = new Map<number, Article[]>();
@@ -96,9 +148,12 @@ export function Mk3NewsList() {
     setError("");
     try {
       const result = await scrapeNews(selectedDate);
+      setScrapeJob(result.job);
       setArticles(result.articles);
       await Promise.all([loadFilterOptions(), loadAvailableDates()]);
-      if (result.new_count === 0) {
+      if (!result.started && result.job?.status !== "completed") {
+        setError("A scrape job is already running for this date.");
+      } else if (result.job?.status === "completed" && result.new_count === 0) {
         window.alert("새로 수집된 기사가 없습니다.");
       }
     } catch (error) {
@@ -118,6 +173,34 @@ export function Mk3NewsList() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDate, filterCompany, filterTag]);
 
+  useEffect(() => {
+    setScrapeJob(null);
+    void getLatestNewsScrapeJob(selectedDate)
+      .then((job) => setScrapeJob(job))
+      .catch(() => setScrapeJob(null));
+  }, [selectedDate]);
+
+  useEffect(() => {
+    if (!activeScrapeJob || !scrapeJob) return;
+
+    const timer = window.setInterval(() => {
+      void getNewsScrapeJob(scrapeJob.id)
+        .then(async (job) => {
+          setScrapeJob(job);
+          if (!["queued", "running"].includes(job.status)) {
+            window.clearInterval(timer);
+            await Promise.all([loadArticles(), loadFilterOptions(), loadAvailableDates()]);
+          }
+        })
+        .catch((error) => {
+          setError(error instanceof Error ? error.message : "Failed to refresh scrape job.");
+        });
+    }, 5000);
+
+    return () => window.clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeScrapeJob, scrapeJob?.id]);
+
   return (
     <main className={styles.page}>
       <header className={styles.header}>
@@ -132,11 +215,31 @@ export function Mk3NewsList() {
               router.replace(`/mk3/news?date=${e.target.value}`);
             }}
           />
-          <button type="button" className={styles.scrapeButton} disabled={scraping} onClick={() => void onScrape()}>
-            {scraping ? "수집 중..." : "스크랩"}
+          <button type="button" className={styles.scrapeButton} disabled={scraping || activeScrapeJob} onClick={() => void onScrape()}>
+            {scraping || activeScrapeJob ? "수집 중..." : "스크랩"}
           </button>
         </div>
       </header>
+
+      {scrapeJob ? (
+        <div className={`${styles.jobStatus} ${styles[`jobStatus_${scrapeJob.status}`] ?? ""}`}>
+          <div className={styles.jobStatusHeader}>
+            <strong>{SCRAPE_STATUS_LABEL[scrapeJob.status] ?? "수집 상태"}</strong>
+            <span>
+              {scrapeJob.processed}/{scrapeJob.total || "-"} 처리
+            </span>
+          </div>
+          <div className={styles.progressTrack}>
+            <div className={styles.progressBar} style={{ width: `${scrapeProgress}%` }} />
+          </div>
+          <p>{scrapeJobMessage(scrapeJob)}</p>
+          <p className={styles.jobHint}>네이버 스크래핑 요청 제한을 피하기 위해 백그라운드에서 5~10초 간격으로 수집합니다.</p>
+          {scrapeJob.last_error ? <p className={styles.jobError}>마지막 오류: {scrapeJob.last_error}</p> : null}
+          <p className={styles.jobMeta}>
+            새로 저장 {scrapeJob.inserted} · 기존 기사 {scrapeJob.skipped_existing} · 실패 {scrapeJob.failed}
+          </p>
+        </div>
+      ) : null}
 
       {availableDates.length > 0 && (
         <div className={styles.datechips}>
@@ -185,7 +288,7 @@ export function Mk3NewsList() {
       {error ? <p className={styles.error}>{error}</p> : null}
       {loading ? <div className={styles.empty}>불러오는 중...</div> : null}
 
-      {!loading && articles.length === 0 && !scraping ? (
+      {!loading && articles.length === 0 && !scraping && !activeScrapeJob ? (
         <div className={styles.empty}>
           <p>{selectedDate} 날짜의 기사가 없습니다.</p>
           <p>스크랩 버튼을 눌러 수집하세요.</p>

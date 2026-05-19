@@ -27,6 +27,25 @@ export type Article = {
   analysis: ArticleAnalysis | null;
 };
 
+export type NewsScrapeJob = {
+  id: string;
+  date: string;
+  status: "queued" | "running" | "completed" | "limited" | "failed";
+  total: number;
+  processed: number;
+  inserted: number;
+  skipped_existing: number;
+  failed: number;
+  message: string;
+  last_error: string;
+  current_url: string;
+  created_at: string;
+  updated_at: string;
+  started_at: string;
+  finished_at: string;
+  cooldown_until: string;
+};
+
 async function readJsonSafe<T>(res: Response, fallback: T): Promise<T> {
   try {
     return (await res.json()) as T;
@@ -40,7 +59,7 @@ async function parseDetail(res: Response): Promise<string> {
   return json.detail ?? json.message ?? `HTTP ${res.status}`;
 }
 
-export async function scrapeNews(date: string): Promise<{ articles: Article[]; new_count: number }> {
+export async function scrapeNews(date: string): Promise<{ articles: Article[]; new_count: number; job: NewsScrapeJob; started: boolean }> {
   const res = await fetch("/api/mk3/v1/news/scrape", {
     method: "POST",
     credentials: "include",
@@ -48,7 +67,24 @@ export async function scrapeNews(date: string): Promise<{ articles: Article[]; n
     body: JSON.stringify({ date }),
   });
   if (!res.ok) throw new Error(await parseDetail(res));
-  return readJsonSafe<{ articles: Article[]; new_count: number }>(res, { articles: [], new_count: 0 });
+  return readJsonSafe<{ articles: Article[]; new_count: number; job: NewsScrapeJob; started: boolean }>(
+    res,
+    { articles: [], new_count: 0, job: {} as NewsScrapeJob, started: false },
+  );
+}
+
+export async function getNewsScrapeJob(id: string): Promise<NewsScrapeJob> {
+  const res = await fetch(`/api/mk3/v1/news/scrape/jobs/${id}`, { credentials: "include" });
+  if (!res.ok) throw new Error(await parseDetail(res));
+  return readJsonSafe<NewsScrapeJob>(res, {} as NewsScrapeJob);
+}
+
+export async function getLatestNewsScrapeJob(date: string): Promise<NewsScrapeJob | null> {
+  const qs = new URLSearchParams({ date });
+  const res = await fetch(`/api/mk3/v1/news/scrape/jobs/latest?${qs.toString()}`, { credentials: "include" });
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(await parseDetail(res));
+  return readJsonSafe<NewsScrapeJob | null>(res, null);
 }
 
 export async function listNews(params: {
