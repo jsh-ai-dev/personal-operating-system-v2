@@ -1,5 +1,5 @@
 .page {
-  max-width: 780px;
+  max-width: 860px;
   margin: 28px auto;
   padding: 0 20px;
 }
@@ -19,7 +19,12 @@
 }
 
 .articleHeader {
-  margin-bottom: 24px;
+  border: 1px solid #e5e7eb;
+  border-bottom: 0;
+  border-radius: 8px 8px 0 0;
+  background: #fff;
+  padding: 22px 24px 16px;
+  margin-bottom: 0;
 }
 
 .articleMeta {
@@ -47,9 +52,9 @@
 }
 
 .articleTitle {
-  font-size: 1.15rem;
+  font-size: 1.28rem;
   font-weight: 700;
-  color: #111;
+  color: #0f172a;
   line-height: 1.5;
   margin: 0 0 10px;
 }
@@ -80,28 +85,32 @@
 }
 
 .sourceLink {
+  display: inline-block;
   font-size: 0.8rem;
   color: #6366f1;
   text-decoration: none;
 }
 
 .contentSection {
-  border-top: 1px solid #e5e7eb;
-  padding: 20px 0;
-  margin-bottom: 28px;
+  border: 1px solid #e5e7eb;
+  border-radius: 0 0 8px 8px;
+  background: #fff;
+  padding: 24px;
+  margin-bottom: 32px;
+  box-shadow: 0 1px 2px rgb(15 23 42 / 0.04);
 }
 
 .content {
-  font-size: 0.88rem;
-  line-height: 1.9;
-  color: #1f2937;
+  font-size: 0.95rem;
+  line-height: 1.95;
+  color: #111827;
   white-space: pre-wrap;
   margin: 0;
 }
 
 .analysisSection {
-  border-top: 2px solid #e5e7eb;
-  padding-top: 24px;
+  border-top: 1px solid #d1d5db;
+  padding-top: 28px;
 }
 
 .analysisHeader {
@@ -270,4 +279,20 @@
   font-size: 0.75rem;
   color: #9ca3af;
   margin: 0;
+}
+
+@media (max-width: 640px) {
+  .page {
+    padding: 0 14px;
+  }
+
+  .articleHeader,
+  .contentSection {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .articleTitle {
+    font-size: 1.12rem;
+  }
 }

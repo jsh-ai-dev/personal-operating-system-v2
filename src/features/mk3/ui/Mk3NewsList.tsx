@@ -233,7 +233,7 @@ export function Mk3NewsList() {
             <div className={styles.progressBar} style={{ width: `${scrapeProgress}%` }} />
           </div>
           <p>{scrapeJobMessage(scrapeJob)}</p>
-          <p className={styles.jobHint}>네이버 스크래핑 요청 제한을 피하기 위해 백그라운드에서 5~10초 간격으로 수집합니다.</p>
+          <p className={styles.jobHint}>네이버 스크래핑 요청 제한을 피하기 위해 백그라운드에서 10~20초 간격으로 수집합니다.</p>
           {scrapeJob.last_error ? <p className={styles.jobError}>마지막 오류: {scrapeJob.last_error}</p> : null}
           <p className={styles.jobMeta}>
             새로 저장 {scrapeJob.inserted} · 기존 기사 {scrapeJob.skipped_existing} · 실패 {scrapeJob.failed}
