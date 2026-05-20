@@ -49,7 +49,8 @@ function formatKoreaTime(value: string) {
 function scrapeJobMessage(job: NewsScrapeJob) {
   if (job.status === "queued") return "수집 작업을 준비하고 있습니다.";
   if (job.status === "running") {
-    if (job.total > 0) return `${job.processed + 1}번째 기사를 확인하고 있습니다.`;
+    if (job.total > 0 && job.processed >= job.total) return "수집 결과를 정리하고 있습니다.";
+    if (job.total > 0) return `${Math.min(job.processed + 1, job.total)}번째 기사를 확인하고 있습니다.`;
     return "기사 목록을 가져오고 있습니다.";
   }
   if (job.status === "completed") return "수집이 완료되었습니다.";
@@ -176,7 +177,7 @@ export function Mk3NewsList() {
   useEffect(() => {
     setScrapeJob(null);
     void getLatestNewsScrapeJob(selectedDate)
-      .then((job) => setScrapeJob(job))
+      .then((job) => setScrapeJob(job?.status === "completed" ? null : job))
       .catch(() => setScrapeJob(null));
   }, [selectedDate]);
 
@@ -233,7 +234,7 @@ export function Mk3NewsList() {
             <div className={styles.progressBar} style={{ width: `${scrapeProgress}%` }} />
           </div>
           <p>{scrapeJobMessage(scrapeJob)}</p>
-          <p className={styles.jobHint}>네이버 스크래핑 요청 제한을 피하기 위해 백그라운드에서 10~20초 간격으로 수집합니다.</p>
+          <p className={styles.jobHint}>네이버 스크래핑 요청 제한을 피하기 위해 백그라운드에서 5~10초 간격으로 수집합니다.</p>
           {scrapeJob.last_error ? <p className={styles.jobError}>마지막 오류: {scrapeJob.last_error}</p> : null}
           <p className={styles.jobMeta}>
             새로 저장 {scrapeJob.inserted} · 기존 기사 {scrapeJob.skipped_existing} · 실패 {scrapeJob.failed}
