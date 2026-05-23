@@ -24,6 +24,24 @@ function modelLabel(model: NewsModel) {
   return `${model.id} ($${model.input_per_1m}/$${model.output_per_1m})`;
 }
 
+const ANALYSIS_POLL_INTERVAL_MS = 2000;
+const ANALYSIS_POLL_ATTEMPTS = 45;
+
+function wait(ms: number) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+async function waitForAnalysis(id: string, previousAnalyzedAt: string) {
+  for (let i = 0; i < ANALYSIS_POLL_ATTEMPTS; i += 1) {
+    await wait(ANALYSIS_POLL_INTERVAL_MS);
+    const latest = await getNews(id);
+    if (latest.analysis && latest.analysis.analyzed_at !== previousAnalyzedAt) {
+      return latest;
+    }
+  }
+  throw new Error("Analysis did not finish in time.");
+}
+
 export function Mk3NewsDetail({ id, dateQuery }: { id: string; dateQuery?: string }) {
   const [article, setArticle] = useState<Article | null>(null);
   const [models, setModels] = useState<NewsModel[]>([]);
@@ -54,8 +72,12 @@ export function Mk3NewsDetail({ id, dateQuery }: { id: string; dateQuery?: strin
     setAnalyzing(true);
     setError("");
     try {
+      const previousAnalyzedAt = article?.analysis?.analyzed_at ?? "";
       const result = await analyzeNews(id, selectedModel);
       setArticle(result);
+      if (!result.analysis || result.analysis.analyzed_at === previousAnalyzedAt) {
+        setArticle(await waitForAnalysis(id, previousAnalyzedAt));
+      }
     } catch {
       setError("분석 중 오류가 발생했습니다.");
     } finally {
