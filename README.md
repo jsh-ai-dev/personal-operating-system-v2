@@ -1,8 +1,8 @@
 # Personal Operating System mk2
 
-`mk2`는 Personal Operating System의 메인 웹 앱이자 BFF입니다. Next.js가 브라우저 진입점과 서버 사이드 프록시를 담당하고, NestJS API가 일정/목표 데이터를 관리하며, 별도 NestJS auth-service가 회원가입, 로그인, JWT 발급/폐기를 처리합니다.
+`mk2`는 Personal Operating System의 메인 웹 앱이자 BFF입니다. Next.js가 브라우저 진입점과 서버 사이드 프록시를 담당하고, NestJS API가 일정/목표 데이터를 관리하며, 인증 전용 NestJS auth-service가 회원가입, 로그인, JWT 발급/폐기를 처리합니다.
 
-`mk1`의 노트 API와 `mk3`의 AI API는 브라우저에 직접 노출하지 않고 Next Route Handler를 통해 프록시합니다. 사용자는 하나의 httpOnly 쿠키 세션으로 Calendar, Notes, AI Dashboard, AI Chat, Summary, Search, Quiz, News 화면을 사용합니다.
+`mk1`의 노트 API와 `mk3`의 AI API는 브라우저에 직접 노출하지 않고 Next Route Handler를 통해 프록시합니다. 사용자는 하나의 httpOnly 쿠키 세션으로 Calendar, Notes, Dashboard, AI Chat, Summary, Search, Quiz, News 화면을 사용합니다.
 
 ## 시스템 구조
 
@@ -24,7 +24,7 @@ auth-service :3002
   └─ 회원가입/로그인, JWT jti blacklist, 사용자별 session version
 ```
 
-Next middleware는 보호 라우트 접근 전에 auth-service의 `/api/auth/me`로 세션을 확인합니다. Route Handler는 쿠키의 JWT를 읽어 하위 서비스에 `Authorization: Bearer` 헤더로 전달하고 hop-by-hop 헤더는 제거합니다.
+Next middleware는 보호 라우트 접근 전에 auth-service의 `/api/auth/me`로 세션을 확인합니다. Route Handler는 쿠키의 JWT를 읽어 하위 서비스에 `Authorization: Bearer` 헤더로 전달합니다.
 
 ## 기능
 
@@ -38,26 +38,23 @@ Next middleware는 보호 라우트 접근 전에 auth-service의 `/api/auth/me`
 
 ### Calendar / Goals
 
-- 6주 고정 월간 캘린더
 - 날짜별 짧은 메모와 상세 메모
 - 월간 목표, 주간 목표 저장
-- `date-holidays`와 보정 JSON을 이용한 한국 공휴일 표시
-- 날짜 key, 월 key, 주간 range key 도메인 로직 테스트
+- `date-holidays`를 이용한 한국 공휴일 표시
 
 ### Notes 통합
 
 - mk1 REST API를 통한 노트 목록/상세/작성/수정/삭제
-- 검색어, 북마크, 정렬, 페이지 크기/번호 UI
-- `.txt`, `.pdf` 업로드
-- 원본 열기/다운로드, 북마크, AI 요약 생성/저장
+- 노트 검색, 북마크, AI 요약 생성
+- `.txt`, `.pdf` 업로드, 원본 보기/다운로드
 - 요약 모델 tier, 토큰, 예상 비용 표시
 
 ### mk3 AI 통합 UI
 
 - AI 서비스 구독 Dashboard: ChatGPT, Codex, Claude, Claude Code, Gemini, Cursor 등 CRUD와 사용량 동기화
 - AI Chat: OpenAI, Gemini, Claude SSE 스트리밍 채팅
-- Import/Summary/Quiz: 저장된 대화 import, 요약 조회, 퀴즈 생성/풀이
-- AI Search: mk3 Qdrant 벡터 검색과 전체 재색인
+- Import/Summary/Quiz: 대화 내역 가져오기, 요약 생성, 퀴즈 생성/풀이
+- AI Search: mk3 Qdrant 벡터 검색
 - AI News: 뉴스 스크랩, 기업/태그 필터, 기사 분석
 
 ## 저장소 구조
@@ -123,7 +120,7 @@ Next BFF:
 | Persistence | Prisma 7, PostgreSQL 16 |
 | Session control | Redis jti denylist, session version, rate limit |
 | Test | Vitest, Jest, Supertest |
-| Infra | Docker Compose, Kubernetes, Kustomize, cert-manager, Traefik, GitHub Actions, AWS ECR |
+| Infra | Docker Compose, Kubernetes, Kustomize, cert-manager, Traefik, GitHub Actions, AWS |
 
 ## 로컬 실행
 
@@ -157,7 +154,7 @@ REDIS_URL="redis://127.0.0.1:6380"
 REDIS_KEY_PREFIX="pos:mk2"
 ```
 
-Next BFF가 하위 서비스로 붙는 주소는 기본값이 로컬 포트와 같으면 생략할 수 있습니다. 다른 주소가 필요하면 루트의 `.env.local` 또는 셸 환경 변수에 둡니다.
+하위 서비스 주소는 기본값으로 로컬 포트를 사용하며, 필요 시 루트 `.env.local`에서 변경할 수 있습니다.
 
 ```text
 BACKEND_URL=http://127.0.0.1:3001
@@ -166,7 +163,7 @@ NOTES_SERVICE_URL=http://localhost:8080
 MK3_SERVICE_URL=http://localhost:8001
 ```
 
-`JWT_SECRET`는 mk1의 `POS_JWT_SECRET`와 맞춰야 합니다. mk3는 JWT를 직접 검증하지 않고 auth-service의 `/api/auth/me`에 위임합니다.
+`JWT_SECRET`는 mk1의 `POS_JWT_SECRET`와 같은 값을 사용해야 합니다. mk3는 auth-service의 `/api/auth/me`로 JWT를 검증합니다.
 
 처음 빈 PostgreSQL을 쓰는 경우에는 인프라를 먼저 띄운 뒤 Prisma migration을 한 번 적용합니다. `auth-service`도 같은 `users` 테이블을 쓰므로 migration은 `backend/prisma` 기준으로 관리합니다.
 
@@ -222,4 +219,4 @@ npm run test:e2e --prefix backend
 - `Dockerfile.web`, `Dockerfile.api`, `Dockerfile.auth`: web/api/auth 이미지 분리
 - `k8s/base`: Namespace, ConfigMap, Secret 예시, PostgreSQL, Redis, Auth, API, Web, Ingress
 - `k8s/overlays/aws`: 외부 RDS/Redis, ECR 이미지, Traefik Ingress, cert-manager TLS
-- `.github/workflows/ecr-push.yml`: 수동 실행으로 세 이미지를 ECR에 push하고 self-hosted runner에서 k3s rollout restart
+- `.github/workflows/ecr-push.yml`: web/api/auth 이미지를 ECR push 후 self-hosted runner에서 k3s rollout restart
