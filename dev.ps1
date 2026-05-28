@@ -40,6 +40,15 @@ Wait-DockerContainer -Name "personal-operating-system-mk2-postgres"
 Wait-DockerContainer -Name "personal-operating-system-mk2-redis"
 
 Write-Host ""
+Write-Host "Applying mk2 backend database migrations..."
+Push-Location (Join-Path $rootPath "backend")
+try {
+    npm run prisma:migrate
+} finally {
+    Pop-Location
+}
+
+Write-Host ""
 Write-Host "Starting mk2 web/api/auth..."
 Push-Location $rootPath
 try {

@@ -207,7 +207,7 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
 }
 
 .memoPanelTitle {
@@ -258,6 +258,146 @@
   margin-bottom: 6px;
 }
 
+.panelSubTitle {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: #374151;
+}
+
+.checklistSection {
+  padding: 10px 0;
+  border-top: 1px solid #e5e7eb;
+  border-bottom: 1px solid #e5e7eb;
+  margin-bottom: 14px;
+}
+
+.checklistReadonly {
+  color: #9ca3af;
+}
+
+.checklistHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 0;
+}
+
+.checklistActions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.smallButton,
+.iconButton {
+  border: 1px solid #d1d5db;
+  background: #ffffff;
+  color: #111827;
+  cursor: pointer;
+  font: inherit;
+}
+
+.smallButton {
+  min-width: 46px;
+  padding: 5px 8px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.iconButton {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+  line-height: 1;
+}
+
+.smallButton:hover:not(:disabled),
+.iconButton:hover:not(:disabled) {
+  background: #f3f4f6;
+}
+
+.smallButton:disabled,
+.iconButton:disabled {
+  color: #9ca3af;
+  background: #f3f4f6;
+  cursor: not-allowed;
+}
+
+.checklist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-height: 220px;
+  overflow: auto;
+}
+
+.checklist:not(:empty) {
+  margin-top: 8px;
+}
+
+.checklistItem {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+  min-height: 24px;
+}
+
+.checklistCheckbox {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+}
+
+.checklistCheckbox:disabled {
+  cursor: not-allowed;
+}
+
+.checklistTitle {
+  min-width: 0;
+  font-size: 13px;
+  line-height: 1.25;
+  color: #111827;
+  word-break: break-word;
+}
+
+.checklistReadonly .checklistTitle {
+  color: #9ca3af;
+}
+
+.checklistTitleDone {
+  color: #6b7280;
+  text-decoration: line-through;
+}
+
+.checklistTitleInput {
+  min-width: 0;
+  width: 100%;
+  padding: 4px 7px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #111827;
+  font: inherit;
+  font-size: 13px;
+}
+
+.checklistTitleInput:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.16);
+}
+
 .textareaDetail {
   width: 100%;
   padding: 10px 12px;
@@ -284,7 +424,7 @@
 }
 
 .textareaDetail {
-  min-height: 200px;
+  min-height: 110px;
   flex: 1;
 }
 

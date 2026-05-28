@@ -1,10 +1,11 @@
 "use client";
 
 import type { ChangeEvent, KeyboardEvent } from "react";
+import { useState } from "react";
 
+import { useCalendar } from "@/features/calendar/application/useCalendar";
 import { isSameDate } from "@/features/calendar/domain/calendar";
 import { toDateKey } from "@/features/calendar/domain/dateKey";
-import { useCalendar } from "@/features/calendar/application/useCalendar";
 import styles from "@/features/calendar/ui/Calendar.module.css";
 
 const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
@@ -41,9 +42,14 @@ export function Calendar() {
     selectedDate,
     setSelectedDate,
     selectedDetail,
+    selectedChecklist,
+    checklistLoading,
+    addChecklistItem,
+    removeChecklistItem,
+    setChecklistItemTitle,
+    toggleChecklistItem,
     setBriefForDate,
     setDetailForSelected,
-    deleteMemoForSelected,
     getBriefForDate,
     memosLoading,
     goalsLoading,
@@ -53,6 +59,9 @@ export function Calendar() {
     goToCurrentMonth,
     setCalendarMonth,
   } = useCalendar();
+  const [editingChecklistDateKey, setEditingChecklistDateKey] = useState<string | null>(
+    null,
+  );
   const yearOptions = Array.from(
     { length: YEAR_SPAN * 2 + 1 },
     (_, index) => new Date().getFullYear() - YEAR_SPAN + index,
@@ -66,6 +75,11 @@ export function Calendar() {
         weekday: "long",
       })
     : null;
+  const selectedDateKey = selectedDate ? toDateKey(selectedDate) : null;
+  const isChecklistEditing =
+    selectedDateKey !== null && editingChecklistDateKey === selectedDateKey;
+  const canEditChecklist =
+    selectedDate !== null && selectedChecklist.editable && !checklistLoading;
 
   return (
     <section className={styles.container} aria-label="일정 달력">
@@ -204,21 +218,96 @@ export function Calendar() {
             ) : (
               <h2 className={styles.memoPanelTitle}>날짜를 선택하세요</h2>
             )}
-            <button
-              type="button"
-              className={styles.buttonDanger}
-              onClick={() => void deleteMemoForSelected()}
-              disabled={!selectedDate || memosLoading}
-            >
-              메모 삭제
-            </button>
           </div>
           {syncError ? (
             <p className={styles.syncError} role="alert">
               {syncError}
             </p>
           ) : null}
-          {memosLoading ? <p className={styles.syncHint}>메모 불러오는 중…</p> : null}
+          {memosLoading ? <p className={styles.syncHint}>메모 불러오는 중...</p> : null}
+
+          <section
+            className={[
+              styles.checklistSection,
+              selectedChecklist.isFuture ? styles.checklistReadonly : "",
+            ]
+              .filter(Boolean)
+              .join(" ")}
+            aria-label="Checklist"
+          >
+            <div className={styles.checklistHeader}>
+              <h3 className={styles.panelSubTitle}>Checklist</h3>
+              <div className={styles.checklistActions}>
+                {isChecklistEditing && canEditChecklist ? (
+                  <button
+                    type="button"
+                    className={styles.iconButton}
+                    onClick={addChecklistItem}
+                    aria-label="체크리스트 항목 추가"
+                    title="추가"
+                  >
+                    +
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  className={styles.smallButton}
+                  onClick={() =>
+                    setEditingChecklistDateKey((current) =>
+                      current === selectedDateKey ? null : selectedDateKey,
+                    )
+                  }
+                  disabled={!canEditChecklist}
+                >
+                  {isChecklistEditing ? "Done" : "Edit"}
+                </button>
+              </div>
+            </div>
+            <ul className={styles.checklist}>
+              {selectedChecklist.items.map((item) => (
+                <li key={item.id} className={styles.checklistItem}>
+                  <input
+                    type="checkbox"
+                    className={styles.checklistCheckbox}
+                    checked={item.isChecked}
+                    onChange={() => toggleChecklistItem(item.id)}
+                    disabled={!canEditChecklist}
+                    aria-label={`${item.title || "체크리스트 항목"} 체크`}
+                  />
+                  {isChecklistEditing && canEditChecklist ? (
+                    <input
+                      className={styles.checklistTitleInput}
+                      value={item.title}
+                      onChange={(e) => setChecklistItemTitle(item.id, e.target.value)}
+                      aria-label="체크리스트 항목 이름"
+                    />
+                  ) : (
+                    <span
+                      className={[
+                        styles.checklistTitle,
+                        item.isChecked ? styles.checklistTitleDone : "",
+                      ]
+                        .filter(Boolean)
+                        .join(" ")}
+                    >
+                      {item.title}
+                    </span>
+                  )}
+                  {isChecklistEditing && canEditChecklist ? (
+                    <button
+                      type="button"
+                      className={styles.iconButton}
+                      onClick={() => removeChecklistItem(item.id)}
+                      aria-label={`${item.title || "체크리스트 항목"} 삭제`}
+                      title="삭제"
+                    >
+                      -
+                    </button>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          </section>
 
           <label className={styles.fieldLabel} htmlFor="calendar-memo-detail">
             메모
@@ -226,7 +315,7 @@ export function Calendar() {
           <textarea
             id="calendar-memo-detail"
             className={styles.textareaDetail}
-            rows={12}
+            rows={6}
             value={selectedDate ? selectedDetail : ""}
             onChange={(e) => setDetailForSelected(e.target.value)}
             disabled={!selectedDate || memosLoading}
@@ -238,7 +327,7 @@ export function Calendar() {
       <div className={styles.goalsSection}>
         <h2 className={styles.goalsSectionTitle}>월간 목표</h2>
         {goalsLoading ? (
-          <p className={styles.syncHint}>월간·주간 목표 불러오는 중…</p>
+          <p className={styles.syncHint}>월간/주간 목표 불러오는 중...</p>
         ) : null}
         <textarea
           id="calendar-monthly-goal"
@@ -252,7 +341,7 @@ export function Calendar() {
 
         <h3 className={styles.goalsSubTitle}>주간 목표</h3>
         <p className={styles.goalsSectionHint}>
-          달력 그리드 한 행(일요일~토요일)과 같은 날짜 구간입니다.
+          달력 그리드에 표시되는 일요일부터 토요일까지의 날짜 구간입니다.
         </p>
         <ul className={styles.weekGoalList}>
           {weekRanges.map((row) => {

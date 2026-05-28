@@ -7,13 +7,16 @@ datasource db {
 }
 
 model User {
-  id             String          @id @default(uuid())
-  email          String          @unique
-  passwordHash   String          @map("password_hash")
-  createdAt      DateTime        @default(now()) @map("created_at")
-  calendarMemos  CalendarMemo[]
-  monthlyGoals   MonthlyGoal[]
-  weeklyGoals    WeeklyGoal[]
+  id                            String                             @id @default(uuid())
+  email                         String                             @unique
+  passwordHash                  String                             @map("password_hash")
+  createdAt                     DateTime                           @default(now()) @map("created_at")
+  calendarMemos                 CalendarMemo[]
+  calendarChecklistProfile      CalendarChecklistProfile?
+  calendarChecklistVersions     CalendarChecklistTemplateVersion[]
+  calendarChecklistDays         CalendarChecklistDay[]
+  monthlyGoals                  MonthlyGoal[]
+  weeklyGoals                   WeeklyGoal[]
 
   @@map("users")
 }
@@ -30,6 +33,73 @@ model CalendarMemo {
 
   @@unique([userId, dateKey])
   @@map("calendar_memos")
+}
+
+model CalendarChecklistProfile {
+  userId    String   @id @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  startedOn String   @map("started_on")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("calendar_checklist_profiles")
+}
+
+model CalendarChecklistTemplateVersion {
+  id            String                          @id @default(uuid())
+  userId        String                          @map("user_id")
+  user          User                            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  effectiveFrom String                          @map("effective_from")
+  createdAt     DateTime                        @default(now()) @map("created_at")
+  updatedAt     DateTime                        @updatedAt @map("updated_at")
+  items         CalendarChecklistTemplateItem[]
+
+  @@unique([userId, effectiveFrom])
+  @@index([userId, effectiveFrom])
+  @@map("calendar_checklist_template_versions")
+}
+
+model CalendarChecklistTemplateItem {
+  id         String                           @id @default(uuid())
+  versionId  String                           @map("version_id")
+  version    CalendarChecklistTemplateVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  title      String
+  sortOrder  Int                              @map("sort_order")
+  createdAt  DateTime                         @default(now()) @map("created_at")
+  updatedAt  DateTime                         @updatedAt @map("updated_at")
+
+  @@index([versionId, sortOrder])
+  @@map("calendar_checklist_template_items")
+}
+
+model CalendarChecklistDay {
+  id              String                     @id @default(uuid())
+  userId          String                     @map("user_id")
+  user            User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  dateKey         String                     @map("date_key")
+  sourceVersionId String?                    @map("source_version_id")
+  createdAt       DateTime                   @default(now()) @map("created_at")
+  updatedAt       DateTime                   @updatedAt @map("updated_at")
+  items           CalendarChecklistDayItem[]
+
+  @@unique([userId, dateKey])
+  @@index([userId, dateKey])
+  @@map("calendar_checklist_days")
+}
+
+model CalendarChecklistDayItem {
+  id                   String               @id @default(uuid())
+  dayId                String               @map("day_id")
+  day                  CalendarChecklistDay @relation(fields: [dayId], references: [id], onDelete: Cascade)
+  sourceTemplateItemId String?              @map("source_template_item_id")
+  title                String
+  isChecked            Boolean              @default(false) @map("is_checked")
+  sortOrder            Int                  @map("sort_order")
+  createdAt            DateTime             @default(now()) @map("created_at")
+  updatedAt            DateTime             @updatedAt @map("updated_at")
+
+  @@index([dayId, sortOrder])
+  @@map("calendar_checklist_day_items")
 }
 
 /// `toYearMonthKey`와 동일 (YYYY-MM), 사용자별 1행

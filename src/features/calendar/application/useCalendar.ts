@@ -12,6 +12,12 @@ import { getCalendarWeekRanges } from "@/features/calendar/domain/calendarWeekRo
 import { buildKoreaPublicHolidayNameMap } from "@/features/calendar/domain/koreaPublicHolidays";
 import { toDateKey, toYearMonthKey } from "@/features/calendar/domain/dateKey";
 import {
+  fetchChecklist,
+  replaceChecklistRemote,
+  type CalendarChecklistDto,
+  type CalendarChecklistItemDto,
+} from "@/features/calendar/infrastructure/checklistsApi";
+import {
   fetchMonthlyGoal,
   fetchWeeklyGoalsBatch,
   upsertMonthlyGoalRemote,
@@ -26,6 +32,15 @@ import type { DayMemo } from "@/features/calendar/domain/types";
 
 const emptyMemo = (): DayMemo => ({ brief: "", detail: "" });
 
+const emptyChecklist = (): CalendarChecklistDto => ({
+  dateKey: "",
+  todayKey: "",
+  editable: false,
+  isFuture: false,
+  startedOn: null,
+  items: [],
+});
+
 function saveErrorMessage(error: unknown): string {
   const detail = error instanceof Error ? error.message : "";
   return detail ? `저장에 실패했습니다. (${detail})` : "저장에 실패했습니다.";
@@ -37,11 +52,15 @@ export function useCalendar() {
   const [memos, setMemos] = useState<Record<string, DayMemo>>({});
   const [monthlyGoals, setMonthlyGoals] = useState<Record<string, string>>({});
   const [weeklyGoals, setWeeklyGoals] = useState<Record<string, string>>({});
+  const [selectedChecklist, setSelectedChecklist] =
+    useState<CalendarChecklistDto>(emptyChecklist);
   const [memosLoading, setMemosLoading] = useState(false);
   const [goalsLoading, setGoalsLoading] = useState(false);
+  const [checklistLoading, setChecklistLoading] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
 
   const persistTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const checklistTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const monthlyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const weeklyTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const monthlyGoalsRef = useRef(monthlyGoals);
@@ -152,6 +171,38 @@ export function useCalendar() {
     return memos[key] ?? emptyMemo();
   }, [memos, selectedDate]);
 
+  useEffect(() => {
+    let cancelled = false;
+    if (!selectedDate) {
+      setSelectedChecklist(emptyChecklist());
+      return;
+    }
+
+    const key = toDateKey(selectedDate);
+    void (async () => {
+      await Promise.resolve();
+      if (cancelled) return;
+      setSelectedChecklist({ ...emptyChecklist(), dateKey: key });
+      setChecklistLoading(true);
+      setSyncError(null);
+      try {
+        const checklist = await fetchChecklist(key);
+        if (!cancelled) setSelectedChecklist(checklist);
+      } catch {
+        if (!cancelled) {
+          setSelectedChecklist(emptyChecklist());
+          setSyncError("체크리스트를 불러오지 못했습니다.");
+        }
+      } finally {
+        if (!cancelled) setChecklistLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedDate]);
+
   const getBriefForDate = useCallback(
     (date: Date) => {
       const key = toDateKey(date);
@@ -182,6 +233,45 @@ export function useCalendar() {
       }, 500);
     },
     [flushPersist],
+  );
+
+  const scheduleChecklistPersist = useCallback(
+    (key: string, items: CalendarChecklistItemDto[]) => {
+      const timers = checklistTimersRef.current;
+      if (timers[key]) clearTimeout(timers[key]);
+      timers[key] = setTimeout(() => {
+        delete timers[key];
+        void replaceChecklistRemote(
+          key,
+          items.map((item) => ({
+            id: item.id,
+            title: item.title,
+            isChecked: item.isChecked,
+          })),
+        )
+          .then(() => {
+            setSyncError(null);
+          })
+          .catch((error) => {
+            setSyncError(saveErrorMessage(error));
+          });
+      }, 800);
+    },
+    [],
+  );
+
+  const updateChecklistForSelected = useCallback(
+    (update: (items: CalendarChecklistItemDto[]) => CalendarChecklistItemDto[]) => {
+      if (!selectedDate) return;
+      const key = toDateKey(selectedDate);
+      setSelectedChecklist((prev) => {
+        if (prev.dateKey !== key || !prev.editable) return prev;
+        const items = update(prev.items);
+        scheduleChecklistPersist(key, items);
+        return { ...prev, items };
+      });
+    },
+    [selectedDate, scheduleChecklistPersist],
   );
 
   const setBriefForDate = useCallback(
@@ -230,6 +320,44 @@ export function useCalendar() {
       setSyncError("삭제에 실패했습니다.");
     }
   }, [selectedDate]);
+
+  const addChecklistItem = useCallback(() => {
+    updateChecklistForSelected((items) => [
+      ...items,
+      {
+        id: `local-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+        title: "새 항목",
+        isChecked: false,
+      },
+    ]);
+  }, [updateChecklistForSelected]);
+
+  const removeChecklistItem = useCallback(
+    (itemId: string) => {
+      updateChecklistForSelected((items) => items.filter((item) => item.id !== itemId));
+    },
+    [updateChecklistForSelected],
+  );
+
+  const setChecklistItemTitle = useCallback(
+    (itemId: string, title: string) => {
+      updateChecklistForSelected((items) =>
+        items.map((item) => (item.id === itemId ? { ...item, title } : item)),
+      );
+    },
+    [updateChecklistForSelected],
+  );
+
+  const toggleChecklistItem = useCallback(
+    (itemId: string) => {
+      updateChecklistForSelected((items) =>
+        items.map((item) =>
+          item.id === itemId ? { ...item, isChecked: !item.isChecked } : item,
+        ),
+      );
+    },
+    [updateChecklistForSelected],
+  );
 
   const goToPreviousMonth = () => {
     setViewDate((current) => addMonths(current, -1));
@@ -304,6 +432,12 @@ export function useCalendar() {
     selectedDate,
     setSelectedDate,
     selectedDetail: selectedMemo.detail,
+    selectedChecklist,
+    checklistLoading,
+    addChecklistItem,
+    removeChecklistItem,
+    setChecklistItemTitle,
+    toggleChecklistItem,
     setBriefForDate,
     setDetailForSelected,
     deleteMemoForSelected,

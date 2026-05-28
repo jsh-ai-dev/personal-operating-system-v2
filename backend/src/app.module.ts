@@ -16,6 +16,7 @@ import Redis from "ioredis";
 
 import { JwtAuthModule } from "./auth/jwt-auth.module";
 import { JwtAuthGuard } from "./auth/jwt-auth.guard";
+import { ChecklistModule } from "./checklist/checklist.module";
 import { GoalsModule } from "./goals/goals.module";
 import { HealthModule } from "./health/health.module";
 import { MemoModule } from "./memo/memo.module";
@@ -78,6 +79,7 @@ function resolveEnvFilePath(): string {
     JwtAuthModule,
     HealthModule,
     MemoModule,
+    ChecklistModule,
     GoalsModule,
   ],
   providers: [

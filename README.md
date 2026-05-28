@@ -38,7 +38,7 @@ Next middleware는 보호 라우트 접근 전에 auth-service의 `/api/auth/me`
 
 ### Calendar / Goals
 
-- 날짜별 짧은 메모와 상세 메모
+- 날짜별 짧은 메모, 상세 메모, 체크리스트
 - 월간 목표, 주간 목표 저장
 - `date-holidays`를 이용한 한국 공휴일 표시
 
@@ -71,9 +71,10 @@ personal-operating-system-mk2/
 │  └─ lib/                      # 공통 API client, 서비스 URL resolver, auth constants
 ├─ backend/                     # NestJS 일정/목표 API
 │  ├─ src/memo
+│  ├─ src/checklist
 │  ├─ src/goals
 │  ├─ src/auth                  # JWT 검증과 revocation 확인
-│  └─ prisma/                   # User, CalendarMemo, MonthlyGoal, WeeklyGoal
+│  └─ prisma/                   # User, CalendarMemo, CalendarChecklist, MonthlyGoal, WeeklyGoal
 ├─ auth-service/                # NestJS 인증 전용 서비스
 ├─ k8s/                         # Kubernetes base/AWS overlay
 ├─ compose.yaml                 # PostgreSQL + Redis
@@ -88,6 +89,7 @@ mk2 NestJS API:
 |---|---|---|
 | Health | `GET /api/health`, `GET /api/health/db` | 서버와 DB 상태 확인 |
 | Memos | `GET/POST /api/memos`, `GET/PUT/PATCH/DELETE /api/memos/:dateKey` | 날짜별 메모 |
+| Calendar Checklists | `GET/PUT /api/calendar-checklists/:dateKey` | 날짜별 체크리스트 |
 | Monthly Goals | `GET/PUT/DELETE /api/monthly-goals/:yearMonth` | 월간 목표 |
 | Weekly Goals | `GET /api/weekly-goals/batch`, `GET/PUT/DELETE /api/weekly-goals/:rangeKey` | 주간 목표 |
 
@@ -169,8 +171,10 @@ MK3_SERVICE_URL=http://localhost:8001
 
 ```powershell
 docker compose up -d
-npm run prisma:migrate:dev --prefix backend
+npm run prisma:migrate --prefix backend
 ```
+
+`.\dev.ps1`로 실행하는 경우에는 이 migration 단계가 자동으로 처리됩니다.
 
 ### 3. 개발용 실행
 
@@ -178,12 +182,13 @@ npm run prisma:migrate:dev --prefix backend
 .\dev.ps1
 ```
 
-스크립트는 PostgreSQL/Redis를 Docker Compose로 실행한 뒤 `npm run dev:all`로 web/api/auth를 함께 띄웁니다.
+스크립트는 PostgreSQL/Redis를 Docker Compose로 실행하고 backend Prisma migration을 적용한 뒤 `npm run dev:all`로 web/api/auth를 함께 띄웁니다.
 
 수동 실행:
 
 ```powershell
 docker compose up -d
+npm run prisma:migrate --prefix backend
 npm run dev:all
 ```
 
