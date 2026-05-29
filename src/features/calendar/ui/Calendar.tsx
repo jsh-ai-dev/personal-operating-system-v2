@@ -6,6 +6,7 @@ import { useState } from "react";
 import { useCalendar } from "@/features/calendar/application/useCalendar";
 import { isSameDate } from "@/features/calendar/domain/calendar";
 import { toDateKey } from "@/features/calendar/domain/dateKey";
+import { DietTracker } from "@/features/calendar/ui/DietTracker";
 import styles from "@/features/calendar/ui/Calendar.module.css";
 
 const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
@@ -323,6 +324,8 @@ export function Calendar() {
           />
         </aside>
       </div>
+
+      <DietTracker selectedDate={selectedDate} />
 
       <div className={styles.goalsSection}>
         <h2 className={styles.goalsSectionTitle}>월간 목표</h2>
