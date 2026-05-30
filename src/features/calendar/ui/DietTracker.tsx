@@ -1,7 +1,7 @@
 "use client";
 
 import type { FormEvent } from "react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { toDateKey } from "@/features/calendar/domain/dateKey";
 import {
@@ -20,6 +20,13 @@ import {
 import styles from "@/features/calendar/ui/DietTracker.module.css";
 
 const MEAL_KEYS: MealKey[] = ["breakfast", "lunch", "dinner", "snack"];
+const emptyNutrients = (): NutrientsDto => ({
+  calories: 0,
+  protein_g: 0,
+  carbs_g: 0,
+  fat_g: 0,
+  sugar_g: 0,
+});
 
 type DietTrackerProps = {
   selectedDate: Date | null;
@@ -40,6 +47,37 @@ function parseNumber(value: string): number | null {
 
 function macroText(nutrients: NutrientsDto): string {
   return `탄 ${nutrients.carbs_g}g · 단 ${nutrients.protein_g}g · 지 ${nutrients.fat_g}g · 당 ${nutrients.sugar_g}g`;
+}
+
+function addNutrients(a: NutrientsDto, b: NutrientsDto): NutrientsDto {
+  return {
+    calories: a.calories + b.calories,
+    protein_g: a.protein_g + b.protein_g,
+    carbs_g: a.carbs_g + b.carbs_g,
+    fat_g: a.fat_g + b.fat_g,
+    sugar_g: a.sugar_g + b.sugar_g,
+  };
+}
+
+function subtractNutrients(a: NutrientsDto, b: NutrientsDto): NutrientsDto {
+  return {
+    calories: a.calories - b.calories,
+    protein_g: a.protein_g - b.protein_g,
+    carbs_g: a.carbs_g - b.carbs_g,
+    fat_g: a.fat_g - b.fat_g,
+    sugar_g: a.sugar_g - b.sugar_g,
+  };
+}
+
+function getWeekDateKeys(date: Date): string[] {
+  const start = new Date(date);
+  start.setHours(0, 0, 0, 0);
+  start.setDate(start.getDate() - start.getDay());
+  return Array.from({ length: 7 }, (_, index) => {
+    const next = new Date(start);
+    next.setDate(start.getDate() + index);
+    return toDateKey(next);
+  });
 }
 
 function percent(current: number, target: number | null): number | null {
@@ -70,8 +108,11 @@ export function DietTracker({ selectedDate }: DietTrackerProps) {
   const [message, setMessage] = useState("");
   const [profileLoading, setProfileLoading] = useState(false);
   const [dayLoading, setDayLoading] = useState(false);
+  const [weekLoading, setWeekLoading] = useState(false);
+  const [weekTotal, setWeekTotal] = useState<NutrientsDto>(() => emptyNutrients());
   const [savingProfile, setSavingProfile] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
+  const [profileEditing, setProfileEditing] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -117,16 +158,35 @@ export function DietTracker({ selectedDate }: DietTrackerProps) {
     };
   }, [dateKey]);
 
-  const profileComplete = useMemo(
-    () =>
-      profile.current_weight_kg !== null &&
-      profile.target_weight_kg !== null &&
-      profile.daily_calories !== null &&
-      profile.protein_g !== null &&
-      profile.carbs_g !== null &&
-      profile.fat_g !== null,
-    [profile],
-  );
+  useEffect(() => {
+    if (!selectedDate) {
+      setWeekTotal(emptyNutrients());
+      return;
+    }
+    let cancelled = false;
+    const weekDateKeys = getWeekDateKeys(selectedDate);
+    void (async () => {
+      setWeekLoading(true);
+      try {
+        const days = await Promise.all(weekDateKeys.map((key) => fetchDietDay(key)));
+        if (!cancelled) {
+          setWeekTotal(
+            days.reduce((total, row) => addNutrients(total, row.total), emptyNutrients()),
+          );
+        }
+      } catch (e) {
+        if (!cancelled) {
+          setWeekTotal(emptyNutrients());
+          setError(e instanceof Error ? e.message : "주간 식단 합계를 불러오지 못했습니다.");
+        }
+      } finally {
+        if (!cancelled) setWeekLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedDate]);
 
   const handleProfileField = (field: ProfileField, value: string) => {
     setProfile((current) => ({ ...current, [field]: parseNumber(value) }));
@@ -137,6 +197,7 @@ export function DietTracker({ selectedDate }: DietTrackerProps) {
     setError(null);
     try {
       setProfile(await saveDietProfile(profile));
+      setProfileEditing(false);
     } catch (e) {
       setError(e instanceof Error ? e.message : "목표 정보를 저장하지 못했습니다.");
     } finally {
@@ -151,6 +212,7 @@ export function DietTracker({ selectedDate }: DietTrackerProps) {
     setError(null);
     try {
       const result = await analyzeDietDay(dateKey, message.trim());
+      setWeekTotal((current) => addNutrients(subtractNutrients(current, day.total), result.day.total));
       setDay(result.day);
       setMessage("");
       setChatOpen(true);
@@ -165,103 +227,134 @@ export function DietTracker({ selectedDate }: DietTrackerProps) {
   const proteinPct = percent(day.total.protein_g, profile.protein_g);
   const carbsPct = percent(day.total.carbs_g, profile.carbs_g);
   const fatPct = percent(day.total.fat_g, profile.fat_g);
+  const weeklyCaloriePct = percent(
+    weekTotal.calories,
+    profile.daily_calories !== null ? profile.daily_calories * 7 : null,
+  );
+  const weeklyProteinPct = percent(
+    weekTotal.protein_g,
+    profile.protein_g !== null ? profile.protein_g * 7 : null,
+  );
+  const weeklyCarbsPct = percent(
+    weekTotal.carbs_g,
+    profile.carbs_g !== null ? profile.carbs_g * 7 : null,
+  );
+  const weeklyFatPct = percent(
+    weekTotal.fat_g,
+    profile.fat_g !== null ? profile.fat_g * 7 : null,
+  );
+  const profileRows: Array<{
+    field: ProfileField;
+    label: string;
+    value: number | null;
+    unit: string;
+    inputMode: "decimal" | "numeric";
+  }> = [
+    {
+      field: "current_weight_kg",
+      label: "현재 체중",
+      value: profile.current_weight_kg,
+      unit: "kg",
+      inputMode: "decimal",
+    },
+    {
+      field: "target_weight_kg",
+      label: "목표 체중",
+      value: profile.target_weight_kg,
+      unit: "kg",
+      inputMode: "decimal",
+    },
+    {
+      field: "daily_calories",
+      label: "칼로리",
+      value: profile.daily_calories,
+      unit: "kcal",
+      inputMode: "numeric",
+    },
+    {
+      field: "carbs_g",
+      label: "탄수화물",
+      value: profile.carbs_g,
+      unit: "g",
+      inputMode: "numeric",
+    },
+    {
+      field: "protein_g",
+      label: "단백질",
+      value: profile.protein_g,
+      unit: "g",
+      inputMode: "numeric",
+    },
+    {
+      field: "fat_g",
+      label: "지방",
+      value: profile.fat_g,
+      unit: "g",
+      inputMode: "numeric",
+    },
+  ];
 
   return (
     <section className={styles.section} aria-label="식단 관리">
       <div className={styles.header}>
-        <div>
-          <h2 className={styles.title}>식단 관리</h2>
-          <p className={styles.subtitle}>
-            정확한 검색 대신 먹은 내용을 편하게 적으면 AI가 대략 계산합니다.
-          </p>
-        </div>
-        <span className={styles.modelBadge}>gpt-5-nano</span>
+        <h2 className={styles.title}>식단 관리</h2>
       </div>
 
       <div className={styles.profilePanel}>
-        <div className={styles.profileHeader}>
-          <h3 className={styles.panelTitle}>목표</h3>
-          <button
-            type="button"
-            className={styles.primaryButton}
-            onClick={handleSaveProfile}
-            disabled={savingProfile || profileLoading}
-          >
-            {savingProfile ? "저장 중" : "저장"}
-          </button>
-        </div>
-        <div className={styles.profileGrid}>
-          <label className={styles.inputLabel}>
-            현재 체중
-            <input
-              className={styles.input}
-              inputMode="decimal"
-              value={formatNumber(profile.current_weight_kg)}
-              onChange={(e) => handleProfileField("current_weight_kg", e.target.value)}
-              placeholder="kg"
-            />
-          </label>
-          <label className={styles.inputLabel}>
-            목표 체중
-            <input
-              className={styles.input}
-              inputMode="decimal"
-              value={formatNumber(profile.target_weight_kg)}
-              onChange={(e) => handleProfileField("target_weight_kg", e.target.value)}
-              placeholder="kg"
-            />
-          </label>
-          <label className={styles.inputLabel}>
-            하루 칼로리
-            <input
-              className={styles.input}
-              inputMode="numeric"
-              value={formatNumber(profile.daily_calories)}
-              onChange={(e) => handleProfileField("daily_calories", e.target.value)}
-              placeholder="kcal"
-            />
-          </label>
-          <label className={styles.inputLabel}>
-            단백질
-            <input
-              className={styles.input}
-              inputMode="numeric"
-              value={formatNumber(profile.protein_g)}
-              onChange={(e) => handleProfileField("protein_g", e.target.value)}
-              placeholder="g"
-            />
-          </label>
-          <label className={styles.inputLabel}>
-            탄수화물
-            <input
-              className={styles.input}
-              inputMode="numeric"
-              value={formatNumber(profile.carbs_g)}
-              onChange={(e) => handleProfileField("carbs_g", e.target.value)}
-              placeholder="g"
-            />
-          </label>
-          <label className={styles.inputLabel}>
-            지방
-            <input
-              className={styles.input}
-              inputMode="numeric"
-              value={formatNumber(profile.fat_g)}
-              onChange={(e) => handleProfileField("fat_g", e.target.value)}
-              placeholder="g"
-            />
-          </label>
-        </div>
-        {!profileComplete ? (
-          <p className={styles.hint}>목표를 채워두면 하루 합계와 비교해서 볼 수 있습니다.</p>
-        ) : null}
+        {profileEditing ? (
+          <>
+            <div className={styles.profileGrid}>
+              {profileRows.map((row) => (
+                <label key={row.field} className={styles.inputLabel}>
+                  {row.label}
+                  <input
+                    className={styles.input}
+                    inputMode={row.inputMode}
+                    value={formatNumber(row.value)}
+                    onChange={(e) => handleProfileField(row.field, e.target.value)}
+                    placeholder={row.unit}
+                  />
+                </label>
+              ))}
+            </div>
+            <button
+              type="button"
+              className={styles.primaryButton}
+              onClick={handleSaveProfile}
+              disabled={savingProfile || profileLoading}
+            >
+              {savingProfile ? "저장 중" : "Done"}
+            </button>
+          </>
+        ) : (
+          <>
+            <dl className={styles.profileSummary}>
+              {profileRows
+                .filter(
+                  (row) =>
+                    row.field !== "current_weight_kg" && row.field !== "target_weight_kg",
+                )
+                .map((row) => (
+                  <div key={row.field} className={styles.profileSummaryItem}>
+                    <dt>{row.label}</dt>
+                    <dd>{row.value !== null ? `${formatNumber(row.value)}${row.unit}` : "-"}</dd>
+                  </div>
+                ))}
+            </dl>
+            <button
+              type="button"
+              className={styles.secondaryButton}
+              onClick={() => setProfileEditing(true)}
+              disabled={profileLoading}
+            >
+              Edit
+            </button>
+          </>
+        )}
       </div>
 
       <div className={styles.dayPanel}>
-        <div className={styles.dayHeader}>
-          <h3 className={styles.panelTitle}>{dateKey ?? "날짜 선택"}</h3>
-          {dayLoading ? <span className={styles.statusText}>불러오는 중</span> : null}
-        </div>
+        {dayLoading ? <span className={styles.statusText}>불러오는 중</span> : null}
 
         <div className={styles.summaryGrid}>
           {MEAL_KEYS.map((key) => {
@@ -282,16 +375,26 @@ export function DietTracker({ selectedDate }: DietTrackerProps) {
         </div>
 
         <div className={styles.totalPanel}>
-          <div>
-            <span className={styles.totalLabel}>오늘 합계</span>
-            <strong className={styles.totalCalories}>{day.total.calories} kcal</strong>
-          </div>
+          <strong className={styles.totalCalories}>
+            오늘 합계 {day.total.calories} kcal
+            {caloriePct !== null ? ` (${caloriePct}%)` : ""}
+          </strong>
           <div className={styles.totalMacros}>
             <span>탄 {day.total.carbs_g}g{carbsPct !== null ? ` (${carbsPct}%)` : ""}</span>
             <span>단 {day.total.protein_g}g{proteinPct !== null ? ` (${proteinPct}%)` : ""}</span>
             <span>지 {day.total.fat_g}g{fatPct !== null ? ` (${fatPct}%)` : ""}</span>
-            <span>당 {day.total.sugar_g}g</span>
-            <span>칼 {caloriePct !== null ? `${caloriePct}%` : "-"}</span>
+          </div>
+        </div>
+        <div className={styles.weekTotalPanel}>
+          <strong className={styles.totalCalories}>
+            주간 합계 {weekTotal.calories} kcal
+            {weeklyCaloriePct !== null ? ` (${weeklyCaloriePct}%)` : ""}
+          </strong>
+          <div className={styles.totalMacros}>
+            <span>탄 {weekTotal.carbs_g}g{weeklyCarbsPct !== null ? ` (${weeklyCarbsPct}%)` : ""}</span>
+            <span>단 {weekTotal.protein_g}g{weeklyProteinPct !== null ? ` (${weeklyProteinPct}%)` : ""}</span>
+            <span>지 {weekTotal.fat_g}g{weeklyFatPct !== null ? ` (${weeklyFatPct}%)` : ""}</span>
+            {weekLoading ? <span>불러오는 중</span> : null}
           </div>
         </div>
 
@@ -318,15 +421,18 @@ export function DietTracker({ selectedDate }: DietTrackerProps) {
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             disabled={!dateKey || analyzing}
-            placeholder="예: 아점으로 김밥 한 줄이랑 아이스라떼 먹고, 저녁엔 닭가슴살 샐러드 먹었어"
+            placeholder="예: 아점으로 널담 고단백 저당 배꼽 베이글에 저당 딸기잼 발라먹었고, 저녁엔 양념치킨에 맥주 한 캔 했어."
           />
-          <button
-            type="submit"
-            className={styles.primaryButton}
-            disabled={!dateKey || !message.trim() || analyzing}
-          >
-            {analyzing ? "분석 중" : "AI로 계산"}
-          </button>
+          <div className={styles.chatActions}>
+            <span className={styles.modelBadge}>gpt-5-nano</span>
+            <button
+              type="submit"
+              className={styles.primaryButton}
+              disabled={!dateKey || !message.trim() || analyzing}
+            >
+              {analyzing ? "분석 중" : "기록하기"}
+            </button>
+          </div>
         </form>
 
         {error ? (

@@ -36,10 +36,11 @@ Next middleware는 보호 라우트 접근 전에 auth-service의 `/api/auth/me`
 - `/calendar`, `/notes`, `/mk3/*` 보호 라우트 middleware 검증
 - mk1/mk3/mk2 API로의 서버 사이드 프록시
 
-### Calendar / Goals
+### Calendar / Goals / Diet
 
 - 날짜별 짧은 메모, 상세 메모, 체크리스트
 - 월간 목표, 주간 목표 저장
+- AI 식단 기록 UI: 목표 섭취량, 날짜별 식사 기록, 일간/주간 합계 표시
 - `date-holidays`를 이용한 한국 공휴일 표시
 
 ### Notes 통합
