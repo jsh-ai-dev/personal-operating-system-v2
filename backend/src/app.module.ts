@@ -21,6 +21,7 @@ import { GoalsModule } from "./goals/goals.module";
 import { HealthModule } from "./health/health.module";
 import { MemoModule } from "./memo/memo.module";
 import { PrismaModule } from "./prisma/prisma.module";
+import { UsageModule } from "./usage/usage.module";
 
 /** 루트에서 `npm run dev:api` 할 때와 `backend`에서 실행할 때 모두 `.env`를 찾습니다. */
 function resolveEnvFilePath(): string {
@@ -81,6 +82,7 @@ function resolveEnvFilePath(): string {
     MemoModule,
     ChecklistModule,
     GoalsModule,
+    UsageModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },

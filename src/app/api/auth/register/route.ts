@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { AUTH_COOKIE_NAME } from "@/lib/auth/constants";
+import { buildAuthProxyHeaders } from "@/lib/server/authProxyHeaders";
 import { getAuthServiceUrl } from "@/lib/server/authServiceUrl";
 
 const MAX_AGE_SEC = 60 * 60 * 24 * 7;
@@ -17,7 +18,7 @@ export async function POST(request: NextRequest) {
   try {
     res = await fetch(`${getAuthServiceUrl()}/api/auth/register`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: buildAuthProxyHeaders(request, { "Content-Type": "application/json" }),
       body: JSON.stringify(body),
     });
   } catch {

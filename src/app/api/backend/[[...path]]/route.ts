@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { AUTH_COOKIE_NAME } from "@/lib/auth/constants";
+import { buildAuthProxyHeaders } from "@/lib/server/authProxyHeaders";
 import { getBackendUrl } from "@/lib/server/backendUrl";
 
 const HOP_BY_HOP = new Set([
@@ -36,7 +37,7 @@ async function proxy(
   const subPath = pathParts.length ? pathParts.join("/") : "";
   const target = `${getBackendUrl()}/api/${subPath}${request.nextUrl.search}`;
 
-  const headers = new Headers();
+  const headers = new Headers(buildAuthProxyHeaders(request));
   const accept = request.headers.get("accept");
   if (accept) headers.set("accept", accept);
   const contentType = request.headers.get("content-type");

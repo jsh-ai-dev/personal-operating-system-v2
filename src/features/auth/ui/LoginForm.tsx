@@ -21,7 +21,7 @@ export function LoginForm() {
     router.refresh();
   }
 
-  async function onSubmit(e: React.FormEvent) {
+  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
     setPending(true);
@@ -35,7 +35,8 @@ export function LoginForm() {
     }
   }
 
-  async function onDemoLogin() {
+  async function onDemoLogin(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
     setError(null);
     setDemoPending(true);
     try {
@@ -54,7 +55,7 @@ export function LoginForm() {
     <div>
       <h1 className={styles.title}>로그인</h1>
       <p className={styles.subtitle}>이메일과 비밀번호로 로그인합니다.</p>
-      <form onSubmit={(e) => void onSubmit(e)}>
+      <form action="/api/auth/login" method="post" onSubmit={(e) => void onSubmit(e)}>
         <div className={styles.field}>
           <label className={styles.label} htmlFor="login-email">
             이메일
@@ -62,6 +63,7 @@ export function LoginForm() {
           <input
             id="login-email"
             className={styles.input}
+            name="email"
             type="email"
             autoComplete="email"
             value={email}
@@ -77,6 +79,7 @@ export function LoginForm() {
           <input
             id="login-password"
             className={styles.input}
+            name="password"
             type="password"
             autoComplete="current-password"
             value={password}
@@ -94,16 +97,13 @@ export function LoginForm() {
           {pending ? "처리 중..." : "로그인"}
         </button>
       </form>
-      <div className={styles.demo}>
-        <button
-          type="button"
-          className={styles.demoButton}
-          onClick={() => void onDemoLogin()}
-          disabled={busy}
-        >
-          {demoPending ? "데모 로그인 중..." : "데모 계정으로 로그인"}
-        </button>
-      </div>
+      <form action="/api/auth/demo-login" method="post" onSubmit={(e) => void onDemoLogin(e)}>
+        <div className={styles.demo}>
+          <button type="submit" className={styles.demoButton} disabled={busy}>
+            {demoPending ? "데모 로그인 중..." : "데모 계정으로 로그인"}
+          </button>
+        </div>
+      </form>
       <p className={styles.footer}>
         계정이 없으신가요? <Link href="/register">회원가입</Link>
       </p>

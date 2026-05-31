@@ -17,8 +17,24 @@ model User {
   calendarChecklistDays         CalendarChecklistDay[]
   monthlyGoals                  MonthlyGoal[]
   weeklyGoals                   WeeklyGoal[]
+  pageViews                     PageView[]
 
   @@map("users")
+}
+
+model PageView {
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  path       String
+  ipAddress  String   @map("ip_address")
+  userAgent  String?  @map("user_agent")
+  occurredAt DateTime @default(now()) @map("occurred_at")
+
+  @@index([occurredAt])
+  @@index([path, occurredAt])
+  @@index([userId, occurredAt])
+  @@map("page_views")
 }
 
 model CalendarMemo {

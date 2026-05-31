@@ -6,7 +6,6 @@ import { ConfigModule, ConfigService } from "@nestjs/config";
 import { APP_GUARD } from "@nestjs/core";
 import {
   seconds,
-  ThrottlerGuard,
   ThrottlerModule,
   ThrottlerStorageService,
   type ThrottlerStorage,
@@ -15,6 +14,7 @@ import { ThrottlerStorageRedisService } from "@nest-lab/throttler-storage-redis"
 import Redis from "ioredis";
 
 import { AuthModule } from "./auth/auth.module";
+import { ForwardedThrottlerGuard } from "./auth/forwarded-throttler.guard";
 import { JwtAuthGuard } from "./auth/jwt-auth.guard";
 import { PrismaModule } from "./prisma/prisma.module";
 
@@ -76,7 +76,7 @@ function resolveEnvFilePath(): string {
     AuthModule,
   ],
   providers: [
-    { provide: APP_GUARD, useClass: ThrottlerGuard },
+    { provide: APP_GUARD, useClass: ForwardedThrottlerGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
   ],
 })

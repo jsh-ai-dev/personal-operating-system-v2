@@ -21,13 +21,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
 
-  async function logout() {
+  async function logout(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
     await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
     router.replace("/login");
     router.refresh();
   }
 
-  async function revokeAllDevices() {
+  async function revokeAllDevices(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
     if (
       !window.confirm(
         "모든 기기에서 로그아웃할까요? 이 기기를 포함해 다른 기기의 로그인도 모두 해제됩니다.",
@@ -86,16 +88,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </nav>
         <div className={styles.sidebarFooter}>
           <div className={styles.sessionActions}>
-            <button type="button" className={styles.logoutButton} onClick={() => void logout()}>
-              로그아웃
-            </button>
-            <button
-              type="button"
-              className={styles.revokeAllButton}
-              onClick={() => void revokeAllDevices()}
-            >
-              모든 기기에서 로그아웃
-            </button>
+            <form action="/api/auth/logout" method="post" onSubmit={(e) => void logout(e)}>
+              <button type="submit" className={styles.logoutButton}>
+                로그아웃
+              </button>
+            </form>
+            <form action="/api/auth/revoke-all" method="post" onSubmit={(e) => void revokeAllDevices(e)}>
+              <button type="submit" className={styles.revokeAllButton}>
+                모든 기기에서 로그아웃
+              </button>
+            </form>
           </div>
         </div>
       </aside>
