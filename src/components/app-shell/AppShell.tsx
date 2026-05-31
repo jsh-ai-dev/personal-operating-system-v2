@@ -70,7 +70,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     router.refresh();
   }
 
-  function renderNavLinks(linkClassName = styles.navLink, activeClassName = styles.navLinkActive) {
+  function renderNavLinks(
+    linkClassName = styles.navLink,
+    activeClassName = styles.navLinkActive,
+  ) {
     return NAV_ITEMS.map((item) => {
       const active = isActive(item.href);
       return (
@@ -116,7 +119,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           aria-hidden="true"
         />
         <header className={styles.mobileHeader}>
-          <label className={styles.menuButton} htmlFor="mobile-menu-toggle" aria-label="메뉴 열기">
+          <label
+            className={styles.menuButton}
+            htmlFor="mobile-menu-toggle"
+            aria-label="메뉴 열기"
+          >
             <span />
             <span />
             <span />
@@ -136,7 +143,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <span />
             </label>
           </div>
-          <nav className={styles.mobileNav}>{renderNavLinks(styles.mobileNavLink)}</nav>
+          <nav className={styles.mobileNav}>
+            {renderNavLinks(styles.mobileNavLink)}
+          </nav>
           <div className={styles.drawerFooter}>{renderSessionActions()}</div>
         </aside>
       </div>

@@ -220,6 +220,7 @@
     inset: 0 auto 0 0;
     z-index: 50;
     width: min(64vw, 240px);
+    height: 100dvh;
     display: flex;
     flex-direction: column;
     background: #ffffff;
@@ -281,6 +282,8 @@
   }
 
   .mobileNav {
+    flex: 1 1 auto;
+    min-height: 0;
     display: flex;
     flex-direction: column;
     gap: 4px;
@@ -293,7 +296,7 @@
   }
 
   .drawerFooter {
-    margin-top: auto;
+    flex-shrink: 0;
     padding: 14px 12px 18px;
     border-top: 1px solid #f3f4f6;
   }
