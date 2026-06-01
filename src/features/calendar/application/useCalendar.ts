@@ -326,7 +326,7 @@ export function useCalendar() {
       ...items,
       {
         id: `local-${Date.now()}-${Math.random().toString(16).slice(2)}`,
-        title: "새 항목",
+        title: "",
         isChecked: false,
       },
     ]);
