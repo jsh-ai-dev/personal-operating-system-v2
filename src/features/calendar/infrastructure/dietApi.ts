@@ -133,6 +133,14 @@ export async function fetchDietDay(dateKey: string): Promise<DietDayDto> {
   return readJsonSafe<DietDayDto>(res, emptyDietDay(dateKey));
 }
 
+export async function deleteDietDay(dateKey: string): Promise<void> {
+  const res = await fetch(`/api/mk3/v1/diet/days/${dateKey}`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+  await throwIfNotOk(res);
+}
+
 export async function analyzeDietDay(
   dateKey: string,
   message: string,

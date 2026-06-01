@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { toDateKey } from "@/features/calendar/domain/dateKey";
 import {
   analyzeDietDay,
+  deleteDietDay,
   emptyDietDay,
   emptyDietProfile,
   fetchDietDay,
@@ -61,11 +62,11 @@ function addNutrients(a: NutrientsDto, b: NutrientsDto): NutrientsDto {
 
 function subtractNutrients(a: NutrientsDto, b: NutrientsDto): NutrientsDto {
   return {
-    calories: a.calories - b.calories,
-    protein_g: a.protein_g - b.protein_g,
-    carbs_g: a.carbs_g - b.carbs_g,
-    fat_g: a.fat_g - b.fat_g,
-    sugar_g: a.sugar_g - b.sugar_g,
+    calories: Math.max(0, a.calories - b.calories),
+    protein_g: Math.max(0, a.protein_g - b.protein_g),
+    carbs_g: Math.max(0, a.carbs_g - b.carbs_g),
+    fat_g: Math.max(0, a.fat_g - b.fat_g),
+    sugar_g: Math.max(0, a.sugar_g - b.sugar_g),
   };
 }
 
@@ -110,10 +111,12 @@ export function DietTracker({ selectedDate }: DietTrackerProps) {
   const [dayLoading, setDayLoading] = useState(false);
   const [weekLoading, setWeekLoading] = useState(false);
   const [weekTotal, setWeekTotal] = useState<NutrientsDto>(() => emptyNutrients());
+  const [deletingDay, setDeletingDay] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [profileEditing, setProfileEditing] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
+  const [sourcesOpen, setSourcesOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -220,6 +223,25 @@ export function DietTracker({ selectedDate }: DietTrackerProps) {
       setError(e instanceof Error ? e.message : "AI 식단 분석에 실패했습니다.");
     } finally {
       setAnalyzing(false);
+    }
+  };
+
+  const handleDeleteDay = async () => {
+    if (!dateKey || deletingDay) return;
+    const ok = window.confirm("선택한 날짜의 식단 기록을 모두 삭제할까요?");
+    if (!ok) return;
+    setDeletingDay(true);
+    setError(null);
+    try {
+      await deleteDietDay(dateKey);
+      setWeekTotal((current) => subtractNutrients(current, day.total));
+      setDay(emptyDietDay(dateKey));
+      setMessage("");
+      setChatOpen(false);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "식단 기록 삭제에 실패했습니다.");
+    } finally {
+      setDeletingDay(false);
     }
   };
 
@@ -399,20 +421,6 @@ export function DietTracker({ selectedDate }: DietTrackerProps) {
         </div>
 
         {day.tip ? <p className={styles.tip}>{day.tip}</p> : null}
-        {day.sources.length > 0 ? (
-          <div className={styles.sources}>
-            <span className={styles.sourcesLabel}>참고한 영양 정보</span>
-            <ul className={styles.sourceList}>
-              {day.sources.map((source) => (
-                <li key={source}>
-                  <a href={source} target="_blank" rel="noreferrer">
-                    {source}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ) : null}
 
         <form className={styles.chatForm} onSubmit={handleAnalyze}>
           <textarea
@@ -421,7 +429,7 @@ export function DietTracker({ selectedDate }: DietTrackerProps) {
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             disabled={!dateKey || analyzing}
-            placeholder="예: 아점으로 널담 고단백 저당 배꼽 베이글에 저당 딸기잼 발라먹었고, 저녁엔 양념치킨에 맥주 한 캔 했어."
+            placeholder="예: 아점으로 널담 고단백 저당 배꼽 베이글에 저당 딸기잼 발라먹었고, 저녁엔 양념치킨 한 마리에 맥주 한 캔 했어."
           />
           <div className={styles.chatActions}>
             <span className={styles.modelBadge}>gpt-5-nano</span>
@@ -441,31 +449,77 @@ export function DietTracker({ selectedDate }: DietTrackerProps) {
           </p>
         ) : null}
 
-        <div className={styles.chatHistory}>
-          <button
-            type="button"
-            className={styles.historyToggle}
-            onClick={() => setChatOpen((current) => !current)}
-          >
-            AI 입력/응답 내역 {day.messages.length}
-            <span aria-hidden="true">{chatOpen ? "접기" : "펼치기"}</span>
-          </button>
-          {chatOpen ? (
-            <ol className={styles.messageList}>
-              {day.messages.map((entry, index) => (
-                <li key={`${entry.created_at}-${index}`} className={styles.messageItem}>
-                  <div className={styles.messageMeta}>
-                    <span>{entry.role === "user" ? "나" : "AI"}</span>
-                    <span>{messageTime(entry)}</span>
-                  </div>
-                  <p className={styles.messageText}>
-                    {entry.role === "assistant" ? assistantSummary(entry.content) : entry.content}
-                  </p>
-                </li>
-              ))}
-            </ol>
-          ) : null}
-        </div>
+        {day.messages.length > 0 ? (
+          <div className={styles.chatHistory}>
+            <div className={styles.historyHeader}>
+              <button
+                type="button"
+                className={styles.historyToggle}
+                onClick={() => setChatOpen((current) => !current)}
+              >
+                AI 입력/응답 내역 {day.messages.length}
+              </button>
+              <div className={styles.historyActions}>
+                {chatOpen ? (
+                  <button
+                    type="button"
+                    className={styles.dangerButton}
+                    onClick={handleDeleteDay}
+                    disabled={!dateKey || deletingDay}
+                  >
+                    {deletingDay ? "삭제 중" : "지우기"}
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  className={styles.historyToggleAction}
+                  onClick={() => setChatOpen((current) => !current)}
+                >
+                  {chatOpen ? "접기" : "펼치기"}
+                </button>
+              </div>
+            </div>
+            {chatOpen ? (
+              <ol className={styles.messageList}>
+                {day.messages.map((entry, index) => (
+                  <li key={`${entry.created_at}-${index}`} className={styles.messageItem}>
+                    <div className={styles.messageMeta}>
+                      <span>{entry.role === "user" ? "나" : "AI"}</span>
+                      <span>{messageTime(entry)}</span>
+                    </div>
+                    <p className={styles.messageText}>
+                      {entry.role === "assistant" ? assistantSummary(entry.content) : entry.content}
+                    </p>
+                  </li>
+                ))}
+              </ol>
+            ) : null}
+          </div>
+        ) : null}
+
+        {day.sources.length > 0 ? (
+          <div className={styles.sources}>
+            <button
+              type="button"
+              className={styles.sourcesToggle}
+              onClick={() => setSourcesOpen((current) => !current)}
+            >
+              참고한 영양 정보 {day.sources.length}
+              <span aria-hidden="true">{sourcesOpen ? "접기" : "펼치기"}</span>
+            </button>
+            {sourcesOpen ? (
+              <ul className={styles.sourceList}>
+                {day.sources.map((source) => (
+                  <li key={source}>
+                    <a href={source} target="_blank" rel="noreferrer">
+                      {source}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </div>
+        ) : null}
       </div>
     </section>
   );
