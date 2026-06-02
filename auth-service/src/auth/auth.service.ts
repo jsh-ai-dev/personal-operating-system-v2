@@ -14,6 +14,27 @@ import type { RegisterDto } from "./dto/register.dto";
 import type { JwtUser } from "./jwt.strategy";
 import { JwtRevocationService } from "./jwt-revocation.service";
 
+const RESERVED_EMAIL_LOCAL_PARTS = [
+  "admin",
+  "administrator",
+  "root",
+  "system",
+  "superuser",
+  "owner",
+] as const;
+
+function isReservedEmail(email: string): boolean {
+  const [localPart] = email.split("@");
+
+  return RESERVED_EMAIL_LOCAL_PARTS.some(
+    (reserved) =>
+      localPart === reserved ||
+      localPart.startsWith(`${reserved}.`) ||
+      localPart.startsWith(`${reserved}-`) ||
+      localPart.startsWith(`${reserved}_`),
+  );
+}
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -24,6 +45,10 @@ export class AuthService {
 
   async register(dto: RegisterDto) {
     const email = dto.email.trim().toLowerCase();
+    if (isReservedEmail(email)) {
+      throw new ConflictException("사용할 수 없는 이메일입니다.");
+    }
+
     const existing = await this.prisma.user.findUnique({
       where: { email },
     });
